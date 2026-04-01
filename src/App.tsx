@@ -193,7 +193,9 @@ export default function App() {
   const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
   const [emailInput, setEmailInput] = useState<string>(''); 
   const [passwordInput, setPasswordInput] = useState<string>('');
-  const [loginError, setLoginError] = useState<boolean>(false);
+  
+  // 【修改】將登入錯誤訊息改為字串，顯示精準錯誤原因
+  const [loginError, setLoginError] = useState<string | false>(false);
   const [tempLogoUrl, setTempLogoUrl] = useState<any>(null);
 
   const defaultHeader = {
@@ -271,9 +273,16 @@ export default function App() {
       setShowLoginModal(false);
       setPasswordInput('');
       setEmailInput('');
-    } catch (error) {
-      console.error("登入失敗:", error);
-      setLoginError(true);
+    } catch (error: any) {
+      console.error("登入失敗完整錯誤:", error);
+      // 【修改】精準判斷錯誤原因並顯示對應中文訊息
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
+        setLoginError('帳號或密碼錯誤，請重新輸入');
+      } else if (error.code === 'auth/unauthorized-domain') {
+        setLoginError('目前網址尚未被 Firebase 授權，請至後台加入「已授權網域」');
+      } else {
+        setLoginError(`登入失敗 (${error.code})`);
+      }
     }
   };
 
@@ -518,7 +527,8 @@ export default function App() {
                     loginError ? 'border-red-400 focus:border-red-500 bg-red-50' : 'border-transparent focus:border-zinc-900 focus:bg-white'
                   }`}
                 />
-                {loginError && <p className="text-red-500 text-sm mt-2 font-bold animate-pulse">帳號或密碼錯誤，請重新輸入</p>}
+                {/* 【修改】顯示精準的錯誤訊息 */}
+                {loginError && <p className="text-red-500 text-sm mt-2 font-bold animate-pulse">{loginError}</p>}
               </div>
               
               <div className="flex space-x-3">
