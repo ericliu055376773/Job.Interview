@@ -9,10 +9,10 @@ import { initializeFirestore, collection, addDoc, doc, setDoc, getDoc, getDocs }
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
 
 // ==========================================
-// 2. 填入您的 Firebase 設定 (取自截圖)
+// 2. 填入您的 Firebase 設定 
 // ==========================================
 const firebaseConfig = {
-  apiKey: "AIzaSyCqtwLLAt4FrOeapIp9TsQXRghpWwfZew8",
+  apiKey: "AIzaSyCqtwLlAt4FrOeapIp9TsQXRghpWwfZew8", 
   authDomain: "job-interview-83e53.firebaseapp.com",
   projectId: "job-interview-83e53",
   storageBucket: "job-interview-83e53.firebasestorage.app",
@@ -194,7 +194,7 @@ export default function App() {
   const [emailInput, setEmailInput] = useState<string>(''); 
   const [passwordInput, setPasswordInput] = useState<string>('');
   
-  // 【修改】將登入錯誤訊息改為字串，顯示精準錯誤原因
+  // 將登入錯誤訊息改為字串，顯示精準錯誤原因
   const [loginError, setLoginError] = useState<string | false>(false);
   const [tempLogoUrl, setTempLogoUrl] = useState<any>(null);
 
@@ -275,13 +275,15 @@ export default function App() {
       setEmailInput('');
     } catch (error: any) {
       console.error("登入失敗完整錯誤:", error);
-      // 【修改】精準判斷錯誤原因並顯示對應中文訊息
-      if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
+      // 精準判斷 API 金鑰錯誤與其他錯誤，以中文友善提示
+      if (error.message && error.message.includes('api-key-not-valid')) {
+        setLoginError('API 金鑰錯誤：您可能複製錯了，或是少複製到字母。請檢查程式碼。');
+      } else if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
         setLoginError('帳號或密碼錯誤，請重新輸入');
       } else if (error.code === 'auth/unauthorized-domain') {
         setLoginError('目前網址尚未被 Firebase 授權，請至後台加入「已授權網域」');
       } else {
-        setLoginError(`登入失敗 (${error.code})`);
+        setLoginError(`登入失敗 (${error.code || error.message})`);
       }
     }
   };
@@ -527,7 +529,6 @@ export default function App() {
                     loginError ? 'border-red-400 focus:border-red-500 bg-red-50' : 'border-transparent focus:border-zinc-900 focus:bg-white'
                   }`}
                 />
-                {/* 【修改】顯示精準的錯誤訊息 */}
                 {loginError && <p className="text-red-500 text-sm mt-2 font-bold animate-pulse">{loginError}</p>}
               </div>
               
