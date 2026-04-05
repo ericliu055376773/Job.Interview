@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useRef, useEffect } from 'react';
 // ==========================================
 // 1. 載入 Firebase 模組
@@ -28,7 +27,7 @@ const db = initializeFirestore(app, {
 const auth = getAuth(app); 
 
 // ==========================================
-// 免安裝升級版：內建原生 SVG 圖示 (加入 TypeScript any 定義)
+// 免安裝升級版：內建原生 SVG 圖示
 // ==========================================
 const SvgIcon = ({ path, className, ...props }: any) => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
@@ -164,6 +163,117 @@ const ImageCropper = ({ imageUrl, onCrop, onCancel }: any) => {
             確認裁切
           </button>
         </div>
+      </div>
+    </div>
+  );
+};
+
+// ==========================================
+// 滑動解鎖按鈕 (Swipe to Submit)
+// ==========================================
+const SwipeToSubmit = ({ disabled, isLoading, onSubmitTrigger }: any) => {
+  const [dragOffset, setDragOffset] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const thumbRef = useRef<HTMLDivElement>(null);
+
+  const handleStart = (e: any) => {
+    if (disabled || isLoading) return;
+    setIsDragging(true);
+    setStartX(e.type.includes('mouse') ? e.clientX : e.touches[0].clientX);
+  };
+
+  useEffect(() => {
+    const handleMove = (e: MouseEvent | TouchEvent) => {
+      if (!isDragging || !containerRef.current || !thumbRef.current) return;
+      const currentX = 'touches' in e ? e.touches[0].clientX : (e as MouseEvent).clientX;
+      
+      // 計算最大可滑動距離：容器寬度 - 按鈕寬度 - 左右內邊距(px-2 = 16px)
+      const maxOffset = containerRef.current.clientWidth - thumbRef.current.clientWidth - 16;
+      let newOffset = currentX - startX;
+      
+      if (newOffset < 0) newOffset = 0;
+      if (newOffset > maxOffset) newOffset = maxOffset;
+      setDragOffset(newOffset);
+
+      // 當滑動距離超過總長的 95% 視為完成
+      if (newOffset >= maxOffset * 0.95) {
+        setIsDragging(false);
+        setDragOffset(maxOffset);
+        onSubmitTrigger(); // 觸發表單送出
+        // 稍作延遲後彈回，以防表單驗證未過（例如有漏填必填）時能恢復原狀
+        setTimeout(() => setDragOffset(0), 400);
+      }
+    };
+
+    const handleEnd = () => {
+      if (!isDragging) return;
+      setIsDragging(false);
+      setDragOffset(0); // 未拉到底放開時彈回原位
+    };
+
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMove);
+      document.addEventListener('mouseup', handleEnd);
+      document.addEventListener('touchmove', handleMove, { passive: false });
+      document.addEventListener('touchend', handleEnd);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMove);
+      document.removeEventListener('mouseup', handleEnd);
+      document.removeEventListener('touchmove', handleMove);
+      document.removeEventListener('touchend', handleEnd);
+    };
+  }, [isDragging, startX, disabled, isLoading, onSubmitTrigger]);
+
+  return (
+    <div
+      ref={containerRef}
+      className={`relative w-full h-16 rounded-full flex items-center px-2 overflow-hidden select-none ${
+        disabled || isLoading ? 'bg-zinc-200 opacity-70' : 'bg-[#E5E5EA]'
+      }`}
+    >
+      {/* 進度背景條 */}
+      <div
+        className={`absolute left-0 top-0 bottom-0 rounded-full z-0 ${disabled || isLoading ? 'bg-zinc-300' : 'bg-[#D1D1D6]'}`}
+        style={{
+          width: dragOffset + 56, // 48(圓寬) + 8(左padding)
+          transition: isDragging ? 'none' : 'width 0.3s ease-out'
+        }}
+      />
+
+      {/* 滑動圓形按鈕 */}
+      <div
+        ref={thumbRef}
+        onMouseDown={handleStart}
+        onTouchStart={handleStart}
+        style={{
+          transform: `translateX(${dragOffset}px)`,
+          transition: isDragging ? 'none' : 'transform 0.3s ease-out'
+        }}
+        className={`w-12 h-12 bg-white rounded-full shadow-sm flex items-center justify-center z-20 absolute touch-none ${
+          disabled || isLoading ? 'cursor-not-allowed' : 'cursor-grab active:cursor-grabbing hover:scale-105'
+        }`}
+      >
+        {isLoading ? (
+          <Loader2 className="animate-spin h-6 w-6 text-zinc-900" />
+        ) : (
+          <CheckCircle className="h-6 w-6 text-zinc-900" />
+        )}
+      </div>
+
+      {/* 中間文字 */}
+      <span className="absolute inset-0 flex items-center justify-center text-[15px] font-bold text-zinc-900 tracking-wide z-10 pointer-events-none opacity-90">
+        {isLoading ? '傳送中...' : 'Continue'}
+      </span>
+
+      {/* 右側箭頭裝飾 */}
+      <div className="absolute right-6 flex items-center space-x-[-8px] text-zinc-400 z-10 pointer-events-none">
+        <ChevronRight className="w-5 h-5 opacity-40" />
+        <ChevronRight className="w-5 h-5 opacity-70" />
+        <ChevronRight className="w-5 h-5" />
       </div>
     </div>
   );
@@ -1115,36 +1225,13 @@ export default function App() {
                 {/* 完美復刻的專屬 Continue 膠囊按鈕 */}
                 {/* ========================================================= */}
                 <div className="pt-4">
-                  <button
-                    type="submit"
+                  <SwipeToSubmit
                     disabled={status === 'submitting' || !formData.consent}
-                    className={`relative w-full h-16 rounded-full flex items-center px-2 transition-all duration-300 group ${
-                      (status === 'submitting' || !formData.consent) 
-                      ? 'bg-zinc-200 cursor-not-allowed opacity-70' 
-                      : 'bg-[#E5E5EA] hover:bg-[#D1D1D6] active:scale-[0.98]'
-                    }`}
-                  >
-                    {/* 左側圓形 Icon 區塊 */}
-                    <div className="w-12 h-12 bg-white rounded-full shadow-sm flex items-center justify-center z-10 transition-transform group-hover:scale-105">
-                      {status === 'submitting' ? (
-                        <Loader2 className="animate-spin h-6 w-6 text-zinc-900" />
-                      ) : (
-                        <CheckCircle className="h-6 w-6 text-zinc-900" />
-                      )}
-                    </div>
-                    
-                    {/* 中間文字 */}
-                    <span className="absolute inset-0 flex items-center justify-center text-[15px] font-bold text-zinc-900 tracking-wide">
-                      {status === 'submitting' ? '傳送中...' : 'Continue'}
-                    </span>
-                    
-                    {/* 右側箭頭裝飾 */}
-                    <div className="absolute right-6 flex items-center space-x-[-8px] text-zinc-400 transition-transform group-hover:translate-x-1">
-                      <ChevronRight className="w-5 h-5 opacity-40" />
-                      <ChevronRight className="w-5 h-5 opacity-70" />
-                      <ChevronRight className="w-5 h-5" />
-                    </div>
-                  </button>
+                    isLoading={status === 'submitting'}
+                    onSubmitTrigger={() => document.getElementById('hidden-submit-btn')?.click()}
+                  />
+                  {/* 隱藏的實際送出按鈕，用來觸發 HTML 原生必填驗證與 onSubmit */}
+                  <button type="submit" id="hidden-submit-btn" className="hidden">Submit</button>
                 </div>
 
               </form>
