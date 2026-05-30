@@ -1141,8 +1141,7 @@ export default function App() {
                   ) : (
                     <div className="space-y-3">
                       {filteredCandidates.map(candidate => {
-                        try {
-                        const gradeInfo = GRADE_OPTIONS.find(g => g.value === candidate.interview_grade);
+                        const gradeInfo = GRADE_OPTIONS.find(g => g.value === candidate?.interview_grade);
                         const isExpanded = expandedCardId === candidate.id;
                         const isConfirmingDelete = deleteConfirmId === candidate.id;
                         return (
@@ -1270,9 +1269,6 @@ export default function App() {
                             )}
                           </div>
                         );
-                        } catch {
-                          return <div key={candidate?.id || Math.random()} className="p-4 rounded-2xl bg-red-50 text-red-400 text-xs font-medium">此筆資料讀取異常，請聯絡管理員</div>;
-                        }
                       })}
                     </div>
                   )}
