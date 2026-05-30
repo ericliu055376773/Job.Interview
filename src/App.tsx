@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 // 1. 載入 Firebase 模組
 // ==========================================
 import { initializeApp } from "firebase/app";
-import { initializeFirestore, collection, addDoc, doc, setDoc, getDoc, getDocs } from "firebase/firestore";
+import { initializeFirestore, collection, addDoc, doc, setDoc, getDoc, getDocs, updateDoc } from "firebase/firestore";
 // 【新增】載入 Firebase 驗證模組
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
 
@@ -50,6 +50,7 @@ const Trash2 = (p: any) => <SvgIcon path={<><path d="M3 6h18"/><path d="M19 6v14
 const ShieldCheck = (p: any) => <SvgIcon path={<><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2-1 4-2 7-2 2.5 0 4.5 1 6.5 2a1 1 0 0 1 1 1v7z"/><path d="m9 12 2 2 4-4"/></>} {...p} />;
 const Lock = (p: any) => <SvgIcon path={<><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></>} {...p} />;
 const LogOut = (p: any) => <SvgIcon path={<><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></>} {...p} />;
+const ClipboardCheck = (p: any) => <SvgIcon path={<><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></>} {...p} />;
 const SaveIcon = (p: any) => <SvgIcon path={<><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></>} {...p} />;
 const ImageIcon = (p: any) => <SvgIcon path={<><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></>} {...p} />;
 const MapPin = (p: any) => <SvgIcon path={<><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></>} {...p} />;
@@ -280,6 +281,148 @@ const SwipeToSubmit = ({ disabled, isLoading, onSubmitTrigger }: any) => {
 };
 
 
+// ==========================================
+// 面試官評分頁面 Component
+// ==========================================
+const GRADE_OPTIONS = [
+  { value: 'A', label: 'A 級', desc: '強烈推薦錄用', color: 'bg-emerald-500', lightColor: 'bg-emerald-50 border-emerald-400 text-emerald-700' },
+  { value: 'B', label: 'B 級', desc: '建議錄用', color: 'bg-blue-500', lightColor: 'bg-blue-50 border-blue-400 text-blue-700' },
+  { value: 'C', label: 'C 級', desc: '保留考慮', color: 'bg-amber-500', lightColor: 'bg-amber-50 border-amber-400 text-amber-700' },
+  { value: 'D', label: 'D 級', desc: '不建議錄用', color: 'bg-red-500', lightColor: 'bg-red-50 border-red-400 text-red-700' },
+];
+
+const InterviewerRatingPanel = ({ candidateName, branches, onComplete }: {
+  candidateName: string;
+  branches: string[];
+  onComplete: (data: { interviewerName: string; branch: string; grade: string; note: string }) => void;
+}) => {
+  const [interviewerName, setInterviewerName] = useState('');
+  const [branch, setBranch] = useState('');
+  const [grade, setGrade] = useState('');
+  const [note, setNote] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async () => {
+    if (!interviewerName.trim()) { setError('請填寫面試官姓名'); return; }
+    if (!branch) { setError('請選擇分店'); return; }
+    if (!grade) { setError('請選擇評分等級'); return; }
+    setError('');
+    setIsSubmitting(true);
+    await onComplete({ interviewerName: interviewerName.trim(), branch, grade, note });
+    setIsSubmitting(false);
+  };
+
+  return (
+    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="text-center pt-10 pb-8">
+        <div className="w-20 h-20 bg-zinc-900 rounded-full mx-auto flex items-center justify-center mb-5 shadow-lg">
+          <ClipboardCheck className="w-10 h-10 text-white" />
+        </div>
+        <h2 className="text-3xl font-extrabold text-zinc-900 tracking-tight mb-2">面試官評分</h2>
+        <p className="text-sm text-zinc-500 font-medium">
+          應徵者 <strong className="text-zinc-900">{candidateName}</strong> 已完成填寫，請面試官完成評分
+        </p>
+      </div>
+
+      <div className="space-y-6 pb-10">
+        <div className="bg-zinc-50 p-6 rounded-[2rem] border border-zinc-100">
+          <h3 className="text-sm font-bold text-zinc-500 uppercase tracking-widest mb-4">面試官資訊</h3>
+          <div className="space-y-4">
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <User className="h-5 w-5 text-zinc-400" />
+              </div>
+              <input
+                type="text"
+                value={interviewerName}
+                onChange={(e: any) => setInterviewerName(e.target.value)}
+                placeholder="面試官姓名"
+                className="focus:ring-2 focus:ring-zinc-900 block w-full pl-11 sm:text-sm border-transparent bg-white rounded-2xl py-3.5 transition-all hover:bg-zinc-50 focus:bg-white shadow-sm"
+              />
+            </div>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <MapPin className="h-5 w-5 text-zinc-400" />
+              </div>
+              <select
+                value={branch}
+                onChange={(e: any) => setBranch(e.target.value)}
+                className="focus:ring-2 focus:ring-zinc-900 block w-full pl-11 sm:text-sm border-transparent bg-white rounded-2xl py-3.5 transition-all hover:bg-zinc-50 focus:bg-white appearance-none shadow-sm"
+              >
+                <option value="" disabled>請選擇面試分店...</option>
+                {branches.map((b: string) => <option key={b} value={b}>{b}</option>)}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-zinc-50 p-6 rounded-[2rem] border border-zinc-100">
+          <h3 className="text-sm font-bold text-zinc-500 uppercase tracking-widest mb-4">綜合評分</h3>
+          <div className="grid grid-cols-2 gap-3">
+            {GRADE_OPTIONS.map(g => (
+              <button
+                key={g.value}
+                type="button"
+                onClick={() => setGrade(g.value)}
+                className={`relative p-4 rounded-2xl border-2 text-left transition-all active:scale-95 ${
+                  grade === g.value
+                    ? `${g.lightColor} border-current shadow-sm`
+                    : 'bg-white border-zinc-200 hover:border-zinc-300'
+                }`}
+              >
+                <div className="flex items-center mb-1.5">
+                  <span className={`w-8 h-8 rounded-full ${g.color} text-white font-extrabold text-sm flex items-center justify-center mr-2 shadow-sm`}>
+                    {g.value}
+                  </span>
+                  <span className={`font-bold text-sm ${grade === g.value ? '' : 'text-zinc-700'}`}>{g.label}</span>
+                </div>
+                <p className={`text-xs font-medium ${grade === g.value ? 'opacity-80' : 'text-zinc-400'}`}>{g.desc}</p>
+                {grade === g.value && (
+                  <div className="absolute top-3 right-3">
+                    <CheckCircle className="w-4 h-4" />
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-zinc-50 p-6 rounded-[2rem] border border-zinc-100">
+          <h3 className="text-sm font-bold text-zinc-500 uppercase tracking-widest mb-4">評語備註</h3>
+          <textarea
+            value={note}
+            onChange={(e: any) => setNote(e.target.value)}
+            rows={4}
+            placeholder="請填寫對應徵者的整體觀察與建議（選填）..."
+            className="focus:ring-2 focus:ring-zinc-900 block w-full sm:text-sm border-transparent bg-white rounded-2xl py-3.5 px-4 transition-all focus:bg-white resize-none shadow-sm"
+          />
+        </div>
+
+        {error && (
+          <div className="rounded-2xl bg-red-50 p-4 border border-red-100 flex items-center animate-in fade-in">
+            <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mr-3" />
+            <p className="text-sm font-bold text-red-600">{error}</p>
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={handleSubmit}
+          disabled={isSubmitting}
+          className="w-full py-5 rounded-full bg-zinc-900 text-white font-extrabold text-lg shadow-xl hover:bg-zinc-800 active:scale-[0.98] transition-all disabled:opacity-60 flex items-center justify-center"
+        >
+          {isSubmitting ? (
+            <><Loader2 className="animate-spin w-5 h-5 mr-2" />儲存評分中...</>
+          ) : (
+            <><CheckCircle className="w-5 h-5 mr-2" />確認送出評分</>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+};
+
 export default function App() {
   useEffect(() => {
     if (!document.getElementById('tailwind-cdn')) {
@@ -337,6 +480,8 @@ export default function App() {
   const [formData, setFormData] = useState<any>({ name: '', phone: '', position: '', branch: '', answers: {}, consent: false });
   const [status, setStatus] = useState<string>('idle');
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [submittedDocId, setSubmittedDocId] = useState<string>('');
+  const [ratingStatus, setRatingStatus] = useState<string>('idle'); // 'idle' | 'done'
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -478,7 +623,8 @@ export default function App() {
         submitted_at: new Date().toISOString()
       };
 
-      await addDoc(collection(db, "candidates"), payload);
+      const docRef = await addDoc(collection(db, "candidates"), payload);
+      setSubmittedDocId(docRef.id);
       setStatus('success');
     } catch (error: any) {
       setStatus('error');
@@ -494,6 +640,27 @@ export default function App() {
   const resetForm = () => {
     setFormData({ name: '', phone: '', position: '', branch: '', answers: {}, consent: false });
     setStatus('idle');
+    setSubmittedDocId('');
+    setRatingStatus('idle');
+  };
+
+  const handleRatingComplete = async (data: { interviewerName: string; branch: string; grade: string; note: string }) => {
+    try {
+      if (submittedDocId) {
+        await updateDoc(doc(db, "candidates", submittedDocId), {
+          interviewer_name: data.interviewerName,
+          interviewer_branch: data.branch,
+          interview_grade: data.grade,
+          interview_note: data.note,
+          rated_at: new Date().toISOString()
+        });
+      }
+      setRatingStatus('done');
+    } catch (error: any) {
+      console.warn("評分儲存失敗:", error.message);
+      // 即使失敗也讓流程繼續
+      setRatingStatus('done');
+    }
   };
 
   const handleAddQuestion = () => {
@@ -973,7 +1140,9 @@ export default function App() {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {filteredCandidates.map(candidate => (
+                      {filteredCandidates.map(candidate => {
+                          const gradeInfo = GRADE_OPTIONS.find(g => g.value === candidate.interview_grade);
+                          return (
                         <div key={candidate.id} className="bg-zinc-50 p-6 rounded-3xl border border-zinc-100 hover:border-zinc-300 transition-all">
                           <div className="flex justify-between items-start mb-4">
                             <div>
@@ -982,11 +1151,54 @@ export default function App() {
                                 {candidate.candidate_phone} · 應徵職位：{candidate.applied_position === 'waiter' ? '外場服務人員' : candidate.applied_position === 'kitchen' ? '內場廚房人員' : candidate.applied_position === 'store_manager' ? '店長 / 儲備幹部' : candidate.applied_position}
                               </p>
                             </div>
-                            <span className="text-xs font-bold text-zinc-900 bg-white border border-zinc-200 px-3 py-1.5 rounded-full shadow-sm">
-                              {candidate.applied_branch}
-                            </span>
+                            <div className="flex items-center space-x-2">
+                              {gradeInfo ? (
+                                <span className={`text-sm font-extrabold px-3 py-1.5 rounded-full border ${gradeInfo.lightColor}`}>
+                                  {gradeInfo.value} 級
+                                </span>
+                              ) : (
+                                <span className="text-xs font-bold text-zinc-400 bg-white border border-zinc-200 px-3 py-1.5 rounded-full">
+                                  待評分
+                                </span>
+                              )}
+                              <span className="text-xs font-bold text-zinc-900 bg-white border border-zinc-200 px-3 py-1.5 rounded-full shadow-sm">
+                                {candidate.applied_branch}
+                              </span>
+                            </div>
                           </div>
                           
+                          {/* 面試官評分資訊區塊 */}
+                          {candidate.interview_grade && (
+                            <div className={`mb-4 p-4 rounded-2xl border ${gradeInfo ? gradeInfo.lightColor : 'bg-zinc-100 border-zinc-200'}`}>
+                              <div className="flex items-start justify-between mb-2">
+                                <div className="flex items-center">
+                                  <ClipboardCheck className="w-4 h-4 mr-2 opacity-70" />
+                                  <span className="text-xs font-bold uppercase tracking-wide opacity-70">面試官評分結果</span>
+                                </div>
+                                <span className="text-xs font-medium opacity-60">
+                                  面試官：{candidate.interviewer_name} · {candidate.interviewer_branch}
+                                </span>
+                              </div>
+                              <div className="flex items-center mb-2">
+                                <span className={`w-9 h-9 rounded-full ${gradeInfo?.color} text-white font-extrabold text-base flex items-center justify-center mr-3 shadow-sm`}>
+                                  {candidate.interview_grade}
+                                </span>
+                                <div>
+                                  <p className="font-bold text-sm">{gradeInfo?.label} — {gradeInfo?.desc}</p>
+                                  {candidate.rated_at && (
+                                    <p className="text-xs opacity-60 mt-0.5">評分時間：{new Date(candidate.rated_at).toLocaleString()}</p>
+                                  )}
+                                </div>
+                              </div>
+                              {candidate.interview_note && (
+                                <div className="mt-3 pt-3 border-t border-current border-opacity-20">
+                                  <p className="text-xs font-bold opacity-60 mb-1">評語：</p>
+                                  <p className="text-sm font-medium leading-relaxed whitespace-pre-wrap opacity-90">{candidate.interview_note}</p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
                           <div className="space-y-3 pt-4 border-t border-zinc-200">
                             {candidate.custom_answers && candidate.custom_answers.map((ans: any, idx: number) => (
                               <div key={idx}>
@@ -1002,7 +1214,8 @@ export default function App() {
                             提交時間：{new Date(candidate.submitted_at).toLocaleString()}
                           </div>
                         </div>
-                      ))}
+                          );
+                        })}
                     </div>
                   )}
                 </div>
@@ -1049,23 +1262,33 @@ export default function App() {
             </div>
 
             {status === 'success' ? (
-              <div className="rounded-[2rem] bg-zinc-50 p-10 text-center border border-zinc-100 animate-in fade-in zoom-in duration-300 mt-4">
-                <div className="mx-auto flex items-center justify-center h-20 w-20 rounded-full bg-white shadow-sm mb-6">
-                  <CheckCircle className="h-10 w-10 text-zinc-900" aria-hidden="true" />
+              ratingStatus === 'done' ? (
+                /* ===== 全部完成畫面 ===== */
+                <div className="rounded-[2rem] bg-zinc-50 p-10 text-center border border-zinc-100 animate-in fade-in zoom-in duration-300 mt-4">
+                  <div className="mx-auto flex items-center justify-center h-20 w-20 rounded-full bg-emerald-100 shadow-sm mb-6">
+                    <CheckCircle className="h-10 w-10 text-emerald-600" aria-hidden="true" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-zinc-900 mb-3 tracking-tight">面試流程完成！</h3>
+                  <p className="text-sm font-medium text-zinc-500 mb-8 max-w-sm mx-auto leading-relaxed">
+                    評分已記錄至雲端系統，感謝 <strong>{formData.name}</strong> 參與本次面試。
+                  </p>
+                  <button
+                    type="button"
+                    onClick={resetForm}
+                    className="inline-flex items-center px-8 py-4 text-sm font-bold rounded-full shadow-md text-white bg-zinc-900 hover:bg-zinc-800 transition-all active:scale-[0.98]"
+                  >
+                    下一位應徵者
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </button>
                 </div>
-                <h3 className="text-2xl font-bold text-zinc-900 mb-3 tracking-tight">送出成功！</h3>
-                <p className="text-sm font-medium text-zinc-500 mb-8 max-w-sm mx-auto leading-relaxed">
-                  親愛的 <strong>{formData.name}</strong>，您的資料已同步至雲端系統，請準備開始線上測驗。
-                </p>
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  className="inline-flex items-center px-8 py-4 text-sm font-bold rounded-full shadow-md text-white bg-zinc-900 hover:bg-zinc-800 transition-all active:scale-[0.98]"
-                >
-                  返回首頁
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </button>
-              </div>
+              ) : (
+                /* ===== 面試官評分頁面 ===== */
+                <InterviewerRatingPanel
+                  candidateName={formData.name}
+                  branches={customBranches}
+                  onComplete={handleRatingComplete}
+                />
+              )
             ) : (
               <form className="space-y-10" onSubmit={handleSubmit}>
                 
