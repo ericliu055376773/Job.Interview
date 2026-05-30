@@ -381,6 +381,7 @@ export default function App() {
   const [editInterviewerName, setEditInterviewerName] = useState<string>('');
   const [isSavingEdit, setIsSavingEdit] = useState<boolean>(false);
   const [submittedDocId, setSubmittedDocId] = useState<string>('');
+  const submittedDocIdRef = useRef<string>('');  // 同步儲存，避免 closure 讀到舊值
   const [ratingStatus, setRatingStatus] = useState<string>('idle');
   
   // 登入 Modal 狀態
@@ -564,6 +565,7 @@ export default function App() {
 
       const docRef = await addDoc(collection(db, "candidates"), payload);
       setSubmittedDocId(docRef.id);
+      submittedDocIdRef.current = docRef.id;
       setStatus('success');
     } catch (error: any) {
       setStatus('error');
@@ -580,13 +582,14 @@ export default function App() {
     setFormData({ name: '', phone: '', position: '', branch: '', answers: {}, consent: false });
     setStatus('idle');
     setSubmittedDocId('');
+    submittedDocIdRef.current = '';
     setRatingStatus('idle');
   };
 
   const handleRatingComplete = async (data: { interviewerName: string; branch: string; grade: string; note: string }) => {
     try {
-      if (submittedDocId) {
-        await updateDoc(doc(db, 'candidates', submittedDocId), {
+      if (submittedDocIdRef.current) {
+        await updateDoc(doc(db, 'candidates', submittedDocIdRef.current), {
           interviewer_name: data.interviewerName,
           interviewer_branch: data.branch,
           interview_grade: data.grade,
@@ -714,7 +717,7 @@ export default function App() {
     ? candidatesList
     : candidatesList.filter(c => c.applied_branch === adminEmployeeTab);
 
-  const inputClassName = "focus:ring-2 focus:ring-zinc-900 focus:border-zinc-900 block w-full pl-11 sm:text-sm border-transparent bg-zinc-100 rounded-2xl py-3.5 transition-all hover:bg-zinc-200 focus:bg-white";
+  const inputClassName = "focus:ring-2 focus:ring-zinc-900 focus:border-zinc-900 block w-full pl-11 sm:text-sm border-transparent bg-zinc-100 rounded-2xl py-3.5 transition-all hover:bg-zinc-200 focus:bg-white text-zinc-900 font-medium placeholder:text-zinc-400";
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] font-sans pb-12 relative">
@@ -899,7 +902,7 @@ export default function App() {
                         value={draftHeaderContent.title}
                         onChange={(e: any) => setDraftHeaderContent((prev: any) => ({...prev, title: e.target.value}))}
                         rows={2}
-                        className="focus:ring-2 focus:ring-zinc-900 block w-full sm:text-sm border-transparent bg-zinc-100 rounded-2xl py-3.5 px-4 transition-all focus:bg-white resize-none"
+                        className="focus:ring-2 focus:ring-zinc-900 block w-full sm:text-sm border-transparent bg-zinc-100 rounded-2xl py-3.5 px-4 transition-all focus:bg-white resize-none text-zinc-900 font-medium placeholder:text-zinc-400"
                         placeholder="請輸入前台標題 (可換行)"
                       />
                     </div>
@@ -911,7 +914,7 @@ export default function App() {
                         value={draftHeaderContent.description}
                         onChange={(e: any) => setDraftHeaderContent((prev: any) => ({...prev, description: e.target.value}))}
                         rows={3}
-                        className="focus:ring-2 focus:ring-zinc-900 block w-full sm:text-sm border-transparent bg-zinc-100 rounded-2xl py-3.5 px-4 transition-all focus:bg-white resize-none"
+                        className="focus:ring-2 focus:ring-zinc-900 block w-full sm:text-sm border-transparent bg-zinc-100 rounded-2xl py-3.5 px-4 transition-all focus:bg-white resize-none text-zinc-900 font-medium placeholder:text-zinc-400"
                         placeholder="輸入給應徵者的說明文字..."
                       />
                     </div>
@@ -1497,7 +1500,7 @@ export default function App() {
                               rows={4}
                               value={formData.answers[q.id] || ''}
                               onChange={(e: any) => handleAnswerChange(q.id, e.target.value)}
-                              className="focus:ring-2 focus:ring-zinc-900 block w-full sm:text-sm border-transparent bg-zinc-100 rounded-3xl py-4 px-5 transition-all focus:bg-white resize-none"
+                              className="focus:ring-2 focus:ring-zinc-900 block w-full sm:text-sm border-transparent bg-zinc-100 rounded-3xl py-4 px-5 transition-all focus:bg-white resize-none text-zinc-900 font-medium placeholder:text-zinc-400"
                               placeholder="請在此輸入您的回答..."
                             />
                           ) : (
