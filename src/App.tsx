@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 // ==========================================
 // 1. 載入 Firebase 模組
@@ -632,13 +631,24 @@ export default function App() {
         try {
           const querySnapshot = await getDocs(collection(db, "candidates"));
           const list: any[] = [];
-          querySnapshot.forEach((doc) => {
-            list.push({ id: doc.id, ...doc.data() });
+          querySnapshot.forEach((docSnap) => {
+            try {
+              list.push({ id: docSnap.id, ...docSnap.data() });
+            } catch {
+              // 跳過讀取失敗的單筆資料
+            }
           });
-          list.sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime());
+          list.sort((a, b) => {
+            try {
+              return new Date(b.submitted_at || 0).getTime() - new Date(a.submitted_at || 0).getTime();
+            } catch {
+              return 0;
+            }
+          });
           setCandidatesList(list);
         } catch (error: any) {
-          console.warn("載入名單失敗:", error.message);
+          console.warn("載入名單失敗:", error?.message || error);
+          setCandidatesList([]);
         } finally {
           setIsLoadingCandidates(false);
         }
@@ -1131,6 +1141,7 @@ export default function App() {
                   ) : (
                     <div className="space-y-3">
                       {filteredCandidates.map(candidate => {
+                        try {
                         const gradeInfo = GRADE_OPTIONS.find(g => g.value === candidate.interview_grade);
                         const isExpanded = expandedCardId === candidate.id;
                         const isConfirmingDelete = deleteConfirmId === candidate.id;
@@ -1173,7 +1184,7 @@ export default function App() {
                                 {/* 基本資訊 pills */}
                                 <div className="flex flex-wrap gap-2">
                                   <span className="text-xs font-semibold bg-zinc-100 text-zinc-700 px-3 py-1.5 rounded-full">{candidate.candidate_phone}</span>
-                                  <span className="text-xs font-semibold bg-zinc-100 text-zinc-700 px-3 py-1.5 rounded-full">提交：{new Date(candidate.submitted_at).toLocaleString()}</span>
+                                  <span className="text-xs font-semibold bg-zinc-100 text-zinc-700 px-3 py-1.5 rounded-full">提交：{candidate.submitted_at ? new Date(candidate.submitted_at).toLocaleString() : '—'}</span>
                                 </div>
 
                                 {/* 評分區塊 */}
@@ -1259,6 +1270,9 @@ export default function App() {
                             )}
                           </div>
                         );
+                        } catch {
+                          return <div key={candidate?.id || Math.random()} className="p-4 rounded-2xl bg-red-50 text-red-400 text-xs font-medium">此筆資料讀取異常，請聯絡管理員</div>;
+                        }
                       })}
                     </div>
                   )}
