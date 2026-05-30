@@ -441,6 +441,7 @@ export default function App() {
   // 後台主分類狀態
   const [adminMainTab, setAdminMainTab] = useState<string>('settings'); 
   const [adminEmployeeTab, setAdminEmployeeTab] = useState<string>('all'); 
+  const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
   
   // 登入 Modal 狀態
   const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
@@ -721,7 +722,7 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (currentView === 'admin' && adminMainTab === 'employees') {
+    if (currentView === 'admin' && (adminMainTab === 'employees' || adminMainTab === 'ratings')) {
       const fetchCandidates = async () => {
         setIsLoadingCandidates(true);
         try {
@@ -860,15 +861,21 @@ export default function App() {
             <div className="flex space-x-3 mb-6">
               <button 
                 onClick={() => setAdminMainTab('settings')}
-                className={`flex-1 py-4 font-bold text-lg rounded-[1.5rem] transition-all flex items-center justify-center ${adminMainTab === 'settings' ? 'bg-zinc-900 text-white shadow-md' : 'bg-white text-zinc-500 border border-zinc-200 hover:bg-zinc-50'}`}
+                className={`flex-1 py-4 font-bold text-base rounded-[1.5rem] transition-all flex items-center justify-center ${adminMainTab === 'settings' ? 'bg-zinc-900 text-white shadow-md' : 'bg-white text-zinc-500 border border-zinc-200 hover:bg-zinc-50'}`}
               >
                 <SettingsIcon className="w-5 h-5 mr-2" /> 面試單設定
               </button>
               <button 
                 onClick={() => setAdminMainTab('employees')}
-                className={`flex-1 py-4 font-bold text-lg rounded-[1.5rem] transition-all flex items-center justify-center ${adminMainTab === 'employees' ? 'bg-zinc-900 text-white shadow-md' : 'bg-white text-zinc-500 border border-zinc-200 hover:bg-zinc-50'}`}
+                className={`flex-1 py-4 font-bold text-base rounded-[1.5rem] transition-all flex items-center justify-center ${adminMainTab === 'employees' ? 'bg-zinc-900 text-white shadow-md' : 'bg-white text-zinc-500 border border-zinc-200 hover:bg-zinc-50'}`}
               >
                 <Users className="w-5 h-5 mr-2" /> 員工管理
+              </button>
+              <button 
+                onClick={() => setAdminMainTab('ratings')}
+                className={`flex-1 py-4 font-bold text-base rounded-[1.5rem] transition-all flex items-center justify-center ${adminMainTab === 'ratings' ? 'bg-zinc-900 text-white shadow-md' : 'bg-white text-zinc-500 border border-zinc-200 hover:bg-zinc-50'}`}
+              >
+                <ClipboardCheck className="w-5 h-5 mr-2" /> 評分總覽
               </button>
             </div>
 
@@ -1139,86 +1146,227 @@ export default function App() {
                       目前 {adminEmployeeTab === 'all' ? '全部門店' : adminEmployeeTab} 尚未有任何員工資料
                     </div>
                   ) : (
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                       {filteredCandidates.map(candidate => {
-                          const gradeInfo = GRADE_OPTIONS.find(g => g.value === candidate.interview_grade);
-                          return (
-                        <div key={candidate.id} className="bg-zinc-50 p-6 rounded-3xl border border-zinc-100 hover:border-zinc-300 transition-all">
-                          <div className="flex justify-between items-start mb-4">
-                            <div>
-                              <h4 className="text-lg font-bold text-zinc-900 mb-1">{candidate.candidate_name}</h4>
-                              <p className="text-sm text-zinc-500 font-medium">
-                                {candidate.candidate_phone} · 應徵職位：{candidate.applied_position === 'waiter' ? '外場服務人員' : candidate.applied_position === 'kitchen' ? '內場廚房人員' : candidate.applied_position === 'store_manager' ? '店長 / 儲備幹部' : candidate.applied_position}
-                              </p>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              {gradeInfo ? (
-                                <span className={`text-sm font-extrabold px-3 py-1.5 rounded-full border ${gradeInfo.lightColor}`}>
-                                  {gradeInfo.value} 級
-                                </span>
-                              ) : (
-                                <span className="text-xs font-bold text-zinc-400 bg-white border border-zinc-200 px-3 py-1.5 rounded-full">
-                                  待評分
-                                </span>
-                              )}
-                              <span className="text-xs font-bold text-zinc-900 bg-white border border-zinc-200 px-3 py-1.5 rounded-full shadow-sm">
-                                {candidate.applied_branch}
-                              </span>
-                            </div>
-                          </div>
-                          
-                          {/* 面試官評分資訊區塊 */}
-                          {candidate.interview_grade && (
-                            <div className={`mb-4 p-4 rounded-2xl border ${gradeInfo ? gradeInfo.lightColor : 'bg-zinc-100 border-zinc-200'}`}>
-                              <div className="flex items-start justify-between mb-2">
-                                <div className="flex items-center">
-                                  <ClipboardCheck className="w-4 h-4 mr-2 opacity-70" />
-                                  <span className="text-xs font-bold uppercase tracking-wide opacity-70">面試官評分結果</span>
-                                </div>
-                                <span className="text-xs font-medium opacity-60">
-                                  面試官：{candidate.interviewer_name} · {candidate.interviewer_branch}
-                                </span>
-                              </div>
-                              <div className="flex items-center mb-2">
-                                <span className={`w-9 h-9 rounded-full ${gradeInfo?.color} text-white font-extrabold text-base flex items-center justify-center mr-3 shadow-sm`}>
-                                  {candidate.interview_grade}
-                                </span>
-                                <div>
-                                  <p className="font-bold text-sm">{gradeInfo?.label} — {gradeInfo?.desc}</p>
-                                  {candidate.rated_at && (
-                                    <p className="text-xs opacity-60 mt-0.5">評分時間：{new Date(candidate.rated_at).toLocaleString()}</p>
-                                  )}
+                        const gradeInfo = GRADE_OPTIONS.find(g => g.value === candidate.interview_grade);
+                        const isExpanded = expandedCardId === candidate.id;
+                        return (
+                          <div key={candidate.id} className={`rounded-3xl border transition-all overflow-hidden ${isExpanded ? 'border-zinc-300 shadow-md' : 'border-zinc-100 hover:border-zinc-200'}`}>
+                            {/* 卡片標題列（點擊展開） */}
+                            <button
+                              type="button"
+                              onClick={() => setExpandedCardId(isExpanded ? null : candidate.id)}
+                              className="w-full bg-zinc-50 hover:bg-zinc-100 transition-colors px-6 py-4 flex items-center justify-between text-left"
+                            >
+                              <div className="flex items-center space-x-3 min-w-0">
+                                {/* 等級圓圈 */}
+                                {gradeInfo ? (
+                                  <span className={`w-9 h-9 rounded-full ${gradeInfo.color} text-white font-extrabold text-sm flex items-center justify-center flex-shrink-0 shadow-sm`}>
+                                    {gradeInfo.value}
+                                  </span>
+                                ) : (
+                                  <span className="w-9 h-9 rounded-full bg-zinc-200 text-zinc-400 font-extrabold text-xs flex items-center justify-center flex-shrink-0">
+                                    ?
+                                  </span>
+                                )}
+                                <div className="min-w-0">
+                                  <p className="font-bold text-zinc-900 text-sm truncate">{candidate.candidate_name}</p>
+                                  <p className="text-xs text-zinc-400 font-medium truncate">
+                                    {candidate.applied_branch} · {candidate.applied_position === 'waiter' ? '外場' : candidate.applied_position === 'kitchen' ? '內場' : candidate.applied_position === 'store_manager' ? '店長' : candidate.applied_position}
+                                  </p>
                                 </div>
                               </div>
-                              {candidate.interview_note && (
-                                <div className="mt-3 pt-3 border-t border-current border-opacity-20">
-                                  <p className="text-xs font-bold opacity-60 mb-1">評語：</p>
-                                  <p className="text-sm font-medium leading-relaxed whitespace-pre-wrap opacity-90">{candidate.interview_note}</p>
-                                </div>
-                              )}
-                            </div>
-                          )}
+                              <div className="flex items-center space-x-2 flex-shrink-0 ml-3">
+                                {gradeInfo ? (
+                                  <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${gradeInfo.lightColor} hidden sm:inline-flex`}>
+                                    {gradeInfo.desc}
+                                  </span>
+                                ) : (
+                                  <span className="text-xs font-bold text-zinc-400 bg-white border border-zinc-200 px-2.5 py-1 rounded-full hidden sm:inline-flex">
+                                    待評分
+                                  </span>
+                                )}
+                                <ChevronRight className={`w-4 h-4 text-zinc-400 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} />
+                              </div>
+                            </button>
 
-                          <div className="space-y-3 pt-4 border-t border-zinc-200">
-                            {candidate.custom_answers && candidate.custom_answers.map((ans: any, idx: number) => (
-                              <div key={idx}>
-                                <p className="text-xs font-bold text-zinc-500 mb-1">Q: {ans.question}</p>
-                                <p className="text-sm text-zinc-800 font-medium bg-white p-3 rounded-2xl border border-zinc-100 leading-relaxed whitespace-pre-wrap">
-                                  {ans.answer || '無回答'}
-                                </p>
+                            {/* 展開內容 */}
+                            {isExpanded && (
+                              <div className="bg-white px-6 pb-6 pt-4 border-t border-zinc-100 animate-in slide-in-from-top-1 fade-in duration-200">
+                                {/* 基本資料 */}
+                                <div className="flex flex-wrap gap-2 mb-5">
+                                  <span className="text-xs font-semibold bg-zinc-100 text-zinc-600 px-3 py-1.5 rounded-full">{candidate.candidate_phone}</span>
+                                  <span className="text-xs font-semibold bg-zinc-100 text-zinc-600 px-3 py-1.5 rounded-full">提交：{new Date(candidate.submitted_at).toLocaleString()}</span>
+                                </div>
+
+                                {/* 面試官評分區塊 */}
+                                {candidate.interview_grade && gradeInfo ? (
+                                  <div className={`mb-5 p-4 rounded-2xl border ${gradeInfo.lightColor}`}>
+                                    <div className="flex items-center justify-between mb-3">
+                                      <div className="flex items-center">
+                                        <ClipboardCheck className="w-4 h-4 mr-1.5 opacity-70" />
+                                        <span className="text-xs font-bold uppercase tracking-wide opacity-70">面試官評分</span>
+                                      </div>
+                                      <span className="text-xs font-medium opacity-60">{candidate.interviewer_name} · {candidate.interviewer_branch}</span>
+                                    </div>
+                                    <div className="flex items-center mb-2">
+                                      <span className={`w-10 h-10 rounded-full ${gradeInfo.color} text-white font-extrabold text-lg flex items-center justify-center mr-3 shadow-sm`}>
+                                        {candidate.interview_grade}
+                                      </span>
+                                      <div>
+                                        <p className="font-bold text-sm">{gradeInfo.label} — {gradeInfo.desc}</p>
+                                        {candidate.rated_at && <p className="text-xs opacity-60 mt-0.5">評分時間：{new Date(candidate.rated_at).toLocaleString()}</p>}
+                                      </div>
+                                    </div>
+                                    {candidate.interview_note && (
+                                      <div className="mt-3 pt-3 border-t border-current border-opacity-20">
+                                        <p className="text-xs font-bold opacity-60 mb-1">評語：</p>
+                                        <p className="text-sm font-medium leading-relaxed whitespace-pre-wrap opacity-90">{candidate.interview_note}</p>
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <div className="mb-5 p-4 rounded-2xl bg-zinc-50 border border-dashed border-zinc-200 text-center">
+                                    <p className="text-sm text-zinc-400 font-medium">此應徵者尚未完成評分</p>
+                                  </div>
+                                )}
+
+                                {/* 面試問答 */}
+                                {candidate.custom_answers && candidate.custom_answers.length > 0 && (
+                                  <div className="space-y-3 pt-4 border-t border-zinc-100">
+                                    <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-3">面試問答</p>
+                                    {candidate.custom_answers.map((ans: any, idx: number) => (
+                                      <div key={idx}>
+                                        <p className="text-xs font-bold text-zinc-500 mb-1">Q{idx+1}. {ans.question}</p>
+                                        <p className="text-sm text-zinc-800 font-medium bg-zinc-50 p-3 rounded-2xl border border-zinc-100 leading-relaxed whitespace-pre-wrap">
+                                          {ans.answer || '無回答'}
+                                        </p>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
-                            ))}
+                            )}
                           </div>
-                          
-                          <div className="mt-4 text-xs text-zinc-400 font-medium text-right">
-                            提交時間：{new Date(candidate.submitted_at).toLocaleString()}
-                          </div>
-                        </div>
-                          );
-                        })}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
+              </div>
+            )}
+
+            {/* ======================================================= */}
+            {/* 分頁 3: 評分總覽 (A/B/C/D 各一區塊)                       */}
+            {/* ======================================================= */}
+            {adminMainTab === 'ratings' && (
+              <div className="animate-in slide-in-from-bottom-2 fade-in pt-2 space-y-5">
+                {isLoadingCandidates ? (
+                  <div className="py-20 text-center text-zinc-400 font-medium bg-white rounded-3xl border border-zinc-100 flex flex-col items-center shadow-sm">
+                    <Loader2 className="animate-spin w-8 h-8 mb-4 text-zinc-400" />
+                    正在從 Firebase 載入資料...
+                  </div>
+                ) : candidatesList.filter(c => c.interview_grade).length === 0 ? (
+                  <div className="py-20 text-center bg-white rounded-3xl border border-dashed border-zinc-200 shadow-sm">
+                    <ClipboardCheck className="w-10 h-10 text-zinc-200 mx-auto mb-3" />
+                    <p className="text-zinc-400 font-medium">目前尚無任何評分紀錄</p>
+                  </div>
+                ) : (
+                  <>
+                    {/* 統計橫幅 */}
+                    <div className="grid grid-cols-4 gap-3">
+                      {GRADE_OPTIONS.map(g => {
+                        const count = candidatesList.filter(c => c.interview_grade === g.value).length;
+                        return (
+                          <div key={g.value} className={`p-4 rounded-2xl border text-center ${count > 0 ? g.lightColor : 'bg-zinc-50 border-zinc-100'}`}>
+                            <span className={`w-10 h-10 rounded-full ${count > 0 ? g.color : 'bg-zinc-200'} text-white font-extrabold text-lg flex items-center justify-center mx-auto mb-2 shadow-sm`}>
+                              {g.value}
+                            </span>
+                            <p className={`text-2xl font-extrabold ${count > 0 ? '' : 'text-zinc-300'}`}>{count}</p>
+                            <p className={`text-xs font-semibold mt-0.5 ${count > 0 ? 'opacity-70' : 'text-zinc-300'}`}>人</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* A/B/C/D 各區塊 */}
+                    {GRADE_OPTIONS.map(g => {
+                      const group = candidatesList.filter(c => c.interview_grade === g.value);
+                      if (group.length === 0) return null;
+                      return (
+                        <div key={g.value} className="bg-white rounded-[2rem] border border-zinc-100 shadow-sm overflow-hidden">
+                          {/* 區塊標題 */}
+                          <div className={`px-6 py-4 flex items-center ${g.lightColor} border-b border-current border-opacity-20`}>
+                            <span className={`w-10 h-10 rounded-full ${g.color} text-white font-extrabold text-lg flex items-center justify-center mr-3 shadow-sm`}>
+                              {g.value}
+                            </span>
+                            <div>
+                              <p className="font-extrabold text-base">{g.label} — {g.desc}</p>
+                              <p className="text-xs opacity-60 font-medium">共 {group.length} 人</p>
+                            </div>
+                          </div>
+
+                          {/* 人員列表 */}
+                          <div className="divide-y divide-zinc-50">
+                            {group.map(candidate => {
+                              const isExpanded = expandedCardId === `r-${candidate.id}`;
+                              return (
+                                <div key={candidate.id}>
+                                  <button
+                                    type="button"
+                                    onClick={() => setExpandedCardId(isExpanded ? null : `r-${candidate.id}`)}
+                                    className="w-full px-6 py-4 flex items-center justify-between hover:bg-zinc-50 transition-colors text-left"
+                                  >
+                                    <div className="flex items-center space-x-3 min-w-0">
+                                      <div className="w-9 h-9 rounded-full bg-zinc-100 flex items-center justify-center flex-shrink-0">
+                                        <User className="w-4 h-4 text-zinc-500" />
+                                      </div>
+                                      <div className="min-w-0">
+                                        <p className="font-bold text-zinc-900 text-sm">{candidate.candidate_name}</p>
+                                        <p className="text-xs text-zinc-400 font-medium truncate">
+                                          {candidate.interviewer_branch} · 面試官：{candidate.interviewer_name}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center space-x-2 flex-shrink-0 ml-3">
+                                      <span className="text-xs text-zinc-400 font-medium hidden sm:block">
+                                        {candidate.applied_position === 'waiter' ? '外場' : candidate.applied_position === 'kitchen' ? '內場' : candidate.applied_position === 'store_manager' ? '店長' : candidate.applied_position}
+                                      </span>
+                                      <ChevronRight className={`w-4 h-4 text-zinc-400 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} />
+                                    </div>
+                                  </button>
+
+                                  {/* 展開：評語 + 聯絡資訊 */}
+                                  {isExpanded && (
+                                    <div className={`mx-4 mb-4 p-4 rounded-2xl border animate-in slide-in-from-top-1 fade-in duration-200 ${g.lightColor}`}>
+                                      <div className="flex flex-wrap gap-2 mb-3">
+                                        <span className="text-xs font-semibold bg-white bg-opacity-60 px-3 py-1 rounded-full opacity-80">{candidate.candidate_phone}</span>
+                                        <span className="text-xs font-semibold bg-white bg-opacity-60 px-3 py-1 rounded-full opacity-80">{candidate.applied_branch} 應徵</span>
+                                        {candidate.rated_at && (
+                                          <span className="text-xs font-semibold bg-white bg-opacity-60 px-3 py-1 rounded-full opacity-80">
+                                            評分：{new Date(candidate.rated_at).toLocaleString()}
+                                          </span>
+                                        )}
+                                      </div>
+                                      {candidate.interview_note ? (
+                                        <div>
+                                          <p className="text-xs font-bold opacity-60 mb-1">面試官評語：</p>
+                                          <p className="text-sm font-medium leading-relaxed whitespace-pre-wrap opacity-90">{candidate.interview_note}</p>
+                                        </div>
+                                      ) : (
+                                        <p className="text-sm opacity-50 font-medium">（無評語）</p>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </>
+                )}
               </div>
             )}
 
@@ -1317,151 +1465,3 @@ export default function App() {
                       </div>
                       <input
                         type="text"
-                        name="name"
-                        required
-                        value={formData.name}
-                        onChange={handleBasicInputChange}
-                        className={inputClassName}
-                        placeholder="真實姓名 (例如：王大明)"
-                      />
-                    </div>
-
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <Phone className="h-5 w-5 text-zinc-400" />
-                      </div>
-                      <input
-                        type="tel"
-                        name="phone"
-                        required
-                        value={formData.phone}
-                        onChange={handleBasicInputChange}
-                        className={inputClassName}
-                        placeholder="聯絡電話 (0912-345-678)"
-                      />
-                    </div>
-
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <Briefcase className="h-5 w-5 text-zinc-400" />
-                      </div>
-                      <select
-                        name="position"
-                        required
-                        value={formData.position}
-                        onChange={handleBasicInputChange}
-                        className={`${inputClassName} appearance-none`}
-                      >
-                        <option value="" disabled>請選擇欲應徵職缺...</option>
-                        <option value="waiter">外場服務人員 (正職/兼職)</option>
-                        <option value="kitchen">內場廚房人員 (正職/兼職)</option>
-                        <option value="store_manager">店長 / 儲備幹部</option>
-                      </select>
-                    </div>
-
-                    {/* 應徵分店選單 */}
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <MapPin className="h-5 w-5 text-zinc-400" />
-                      </div>
-                      <select
-                        name="branch"
-                        required
-                        value={formData.branch}
-                        onChange={handleBasicInputChange}
-                        className={`${inputClassName} appearance-none`}
-                      >
-                        <option value="" disabled>請選擇應徵分店...</option>
-                        {customBranches.length === 0 && <option value="none" disabled>目前無可用分店</option>}
-                        {customBranches.map(branch => (
-                          <option key={branch} value={branch}>{branch}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                {/* --- 區塊 2: 專業問答題 --- */}
-                {customQuestions.length > 0 && (
-                  <div className="pt-2 border-t border-zinc-100">
-                    <h3 className="text-lg font-bold text-zinc-900 mb-6 mt-8 flex items-center">
-                      <span className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center mr-3 text-sm">2</span>
-                      面試問答
-                    </h3>
-                    <div className="space-y-8">
-                      {customQuestions.map((q, index) => (
-                        <div key={q.id}>
-                          <label className="block text-sm font-bold text-zinc-900 mb-3 leading-relaxed">
-                            {q.text} {q.required && <span className="text-red-500 ml-1">*</span>}
-                          </label>
-                          {q.type === 'textarea' ? (
-                            <textarea
-                              required={q.required}
-                              rows={4}
-                              value={formData.answers[q.id] || ''}
-                              onChange={(e: any) => handleAnswerChange(q.id, e.target.value)}
-                              className="focus:ring-2 focus:ring-zinc-900 block w-full sm:text-sm border-transparent bg-zinc-100 rounded-3xl py-4 px-5 transition-all focus:bg-white resize-none"
-                              placeholder="請在此輸入您的回答..."
-                            />
-                          ) : (
-                            <input
-                              type="text"
-                              required={q.required}
-                              value={formData.answers[q.id] || ''}
-                              onChange={(e: any) => handleAnswerChange(q.id, e.target.value)}
-                              className="focus:ring-2 focus:ring-zinc-900 block w-full sm:text-sm border-transparent bg-zinc-100 rounded-2xl py-3.5 px-5 transition-all focus:bg-white"
-                              placeholder="請輸入簡短回答..."
-                            />
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* --- 區塊 3: 個資同意書 --- */}
-                <div className="bg-zinc-50 p-6 rounded-3xl mt-8">
-                  <div className="flex items-start">
-                    <div className="flex items-center h-6">
-                      <input
-                        id="consent"
-                        name="consent"
-                        type="checkbox"
-                        required
-                        checked={formData.consent}
-                        onChange={handleBasicInputChange}
-                        className="h-5 w-5 text-zinc-900 border-zinc-300 rounded focus:ring-zinc-900 cursor-pointer bg-white"
-                      />
-                    </div>
-                    <div className="ml-3">
-                      <label htmlFor="consent" className="text-sm font-bold text-zinc-900 cursor-pointer block mb-1">
-                        同意隱私權與個資聲明 <span className="text-red-500">*</span>
-                      </label>
-                      <p className="text-xs font-medium text-zinc-500 leading-relaxed">
-                        我瞭解並同意美味餐飲集團為「人才招募」目的，蒐集、處理我的個人資料，未經同意不外流。
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* ========================================================= */}
-                {/* 完美復刻的專屬 Continue 膠囊按鈕 */}
-                {/* ========================================================= */}
-                <div className="pt-4">
-                  <SwipeToSubmit
-                    disabled={status === 'submitting' || !formData.consent}
-                    isLoading={status === 'submitting'}
-                    onSubmitTrigger={() => document.getElementById('hidden-submit-btn')?.click()}
-                  />
-                  {/* 隱藏的實際送出按鈕，用來觸發 HTML 原生必填驗證與 onSubmit */}
-                  <button type="submit" id="hidden-submit-btn" className="hidden">Submit</button>
-                </div>
-
-              </form>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
