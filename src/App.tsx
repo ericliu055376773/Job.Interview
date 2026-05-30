@@ -587,17 +587,27 @@ export default function App() {
   };
 
   const handleRatingComplete = async (data: { interviewerName: string; branch: string; grade: string; note: string }) => {
+    const docId = submittedDocIdRef.current;
+    console.log('[評分] 開始寫入，docId:', docId, '資料:', data);
+    if (!docId) {
+      console.error('[評分] 錯誤：docId 為空，無法寫入');
+      alert('評分儲存失敗：找不到應徵者資料 ID，請聯絡管理員。');
+      setRatingStatus('done');
+      return;
+    }
     try {
-      if (submittedDocIdRef.current) {
-        await updateDoc(doc(db, 'candidates', submittedDocIdRef.current), {
-          interviewer_name: data.interviewerName,
-          interviewer_branch: data.branch,
-          interview_grade: data.grade,
-          interview_note: data.note,
-          rated_at: new Date().toISOString(),
-        });
-      }
-    } catch (e) { /* silent */ }
+      await updateDoc(doc(db, 'candidates', docId), {
+        interviewer_name: data.interviewerName,
+        interviewer_branch: data.branch,
+        interview_grade: data.grade,
+        interview_note: data.note,
+        rated_at: new Date().toISOString(),
+      });
+      console.log('[評分] 寫入成功');
+    } catch (e: any) {
+      console.error('[評分] 寫入失敗:', e?.code, e?.message);
+      alert(`評分儲存失敗：${e?.message || '未知錯誤'}\n\n請確認 Firebase 規則是否允許更新（update）操作。`);
+    }
     setRatingStatus('done');
   };
 
