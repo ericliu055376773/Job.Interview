@@ -50,11 +50,19 @@ const Trash2 = (p: any) => <SvgIcon path={<><path d="M3 6h18"/><path d="M19 6v14
 const ShieldCheck = (p: any) => <SvgIcon path={<><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2-1 4-2 7-2 2.5 0 4.5 1 6.5 2a1 1 0 0 1 1 1v7z"/><path d="m9 12 2 2 4-4"/></>} {...p} />;
 const Lock = (p: any) => <SvgIcon path={<><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></>} {...p} />;
 const LogOut = (p: any) => <SvgIcon path={<><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></>} {...p} />;
-const ClipboardCheck = (p: any) => <SvgIcon path={<><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></> } {...p} />;
 const SaveIcon = (p: any) => <SvgIcon path={<><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></>} {...p} />;
 const ImageIcon = (p: any) => <SvgIcon path={<><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></>} {...p} />;
 const MapPin = (p: any) => <SvgIcon path={<><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></>} {...p} />;
 const Users = (p: any) => <SvgIcon path={<><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>} {...p} />;
+
+const ClipboardCheck = (p: any) => <SvgIcon path={<><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></> } {...p} />;
+
+const GRADE_OPTIONS = [
+  { value: 'A', label: 'A 級', desc: '強烈推薦錄用', color: 'bg-emerald-500', light: 'bg-emerald-50 border-emerald-300 text-emerald-700' },
+  { value: 'B', label: 'B 級', desc: '建議錄用',     color: 'bg-blue-500',    light: 'bg-blue-50 border-blue-300 text-blue-700' },
+  { value: 'C', label: 'C 級', desc: '保留考慮',     color: 'bg-amber-500',   light: 'bg-amber-50 border-amber-300 text-amber-700' },
+  { value: 'D', label: 'D 級', desc: '不建議錄用',   color: 'bg-red-500',     light: 'bg-red-50 border-red-300 text-red-700' },
+];
 
 // ==========================================
 // 原生 Canvas 圖片裁切器
@@ -281,6 +289,72 @@ const SwipeToSubmit = ({ disabled, isLoading, onSubmitTrigger }: any) => {
 };
 
 
+
+const RatingPanel = ({ branches, onComplete }: { branches: string[]; onComplete: (d: any) => void }) => {
+  const [name, setName] = useState('');
+  const [branch, setBranch] = useState('');
+  const [grade, setGrade] = useState('');
+  const [note, setNote] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState('');
+  const submit = async () => {
+    if (!name.trim()) { setErr('請填寫面試官姓名'); return; }
+    if (!branch) { setErr('請選擇分店'); return; }
+    if (!grade) { setErr('請選擇評分等級'); return; }
+    setErr(''); setSaving(true);
+    await onComplete({ interviewerName: name.trim(), branch, grade, note });
+    setSaving(false);
+  };
+  return (
+    <div className="space-y-5">
+      <div className="bg-zinc-50 p-6 rounded-[2rem] border border-zinc-100">
+        <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-4">面試官資訊</h3>
+        <div className="space-y-3">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none"><User className="h-5 w-5 text-zinc-400" /></div>
+            <input type="text" value={name} onChange={(e:any) => setName(e.target.value)} placeholder="面試官姓名"
+              className="block w-full pl-11 py-3.5 text-sm bg-white rounded-2xl border-transparent focus:ring-2 focus:ring-zinc-900 text-zinc-900 font-semibold" />
+          </div>
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none"><MapPin className="h-5 w-5 text-zinc-400" /></div>
+            <select value={branch} onChange={(e:any) => setBranch(e.target.value)}
+              className="block w-full pl-11 py-3.5 text-sm bg-white rounded-2xl border-transparent focus:ring-2 focus:ring-zinc-900 appearance-none text-zinc-900 font-semibold">
+              <option value="" disabled>請選擇面試分店...</option>
+              {branches.map(b => <option key={b} value={b}>{b}</option>)}
+            </select>
+          </div>
+        </div>
+      </div>
+      <div className="bg-zinc-50 p-6 rounded-[2rem] border border-zinc-100">
+        <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-4">綜合評分</h3>
+        <div className="grid grid-cols-2 gap-3">
+          {GRADE_OPTIONS.map(g => (
+            <button key={g.value} type="button" onClick={() => setGrade(g.value)}
+              className={`relative p-4 rounded-2xl border-2 text-left transition-all active:scale-95 ${grade === g.value ? `${g.light} border-current` : 'bg-white border-zinc-200'}`}>
+              <div className="flex items-center mb-1">
+                <span className={`w-8 h-8 rounded-full ${g.color} text-white font-extrabold text-sm flex items-center justify-center mr-2`}>{g.value}</span>
+                <span className="font-bold text-sm">{g.label}</span>
+              </div>
+              <p className="text-xs text-zinc-400">{g.desc}</p>
+              {grade === g.value && <CheckCircle className="absolute top-3 right-3 w-4 h-4" />}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="bg-zinc-50 p-6 rounded-[2rem] border border-zinc-100">
+        <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-3">評語備註（選填）</h3>
+        <textarea value={note} onChange={(e:any) => setNote(e.target.value)} rows={4} placeholder="填寫整體評語..."
+          className="block w-full py-3.5 px-4 text-sm bg-white rounded-2xl border-transparent focus:ring-2 focus:ring-zinc-900 resize-none text-zinc-900 font-semibold" />
+      </div>
+      {err && <div className="flex items-center gap-2 bg-red-50 border border-red-100 rounded-2xl p-4"><AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" /><p className="text-sm font-bold text-red-600">{err}</p></div>}
+      <button type="button" onClick={submit} disabled={saving}
+        className="w-full py-5 rounded-full bg-zinc-900 text-white font-extrabold text-lg hover:bg-zinc-800 active:scale-[0.98] transition-all disabled:opacity-60 flex items-center justify-center gap-2">
+        {saving ? <><Loader2 className="animate-spin w-5 h-5" />儲存中...</> : <><CheckCircle className="w-5 h-5" />確認送出評分</>}
+      </button>
+    </div>
+  );
+};
+
 export default function App() {
   useEffect(() => {
     if (!document.getElementById('tailwind-cdn')) {
@@ -306,6 +380,8 @@ export default function App() {
   const [editNote, setEditNote] = useState<string>('');
   const [editInterviewerName, setEditInterviewerName] = useState<string>('');
   const [isSavingEdit, setIsSavingEdit] = useState<boolean>(false);
+  const [submittedDocId, setSubmittedDocId] = useState<string>('');
+  const [ratingStatus, setRatingStatus] = useState<string>('idle');
   
   // 登入 Modal 狀態
   const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
@@ -345,8 +421,6 @@ export default function App() {
   const [formData, setFormData] = useState<any>({ name: '', phone: '', position: '', branch: '', answers: {}, consent: false });
   const [status, setStatus] = useState<string>('idle');
   const [errorMessage, setErrorMessage] = useState<string>('');
-  const [submittedDocId, setSubmittedDocId] = useState<string>('');
-  const [ratingStatus, setRatingStatus] = useState<string>('idle');
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -512,31 +586,16 @@ export default function App() {
   const handleRatingComplete = async (data: { interviewerName: string; branch: string; grade: string; note: string }) => {
     try {
       if (submittedDocId) {
-        await updateDoc(doc(db, "candidates", submittedDocId), {
+        await updateDoc(doc(db, 'candidates', submittedDocId), {
           interviewer_name: data.interviewerName,
           interviewer_branch: data.branch,
           interview_grade: data.grade,
           interview_note: data.note,
-          rated_at: new Date().toISOString()
+          rated_at: new Date().toISOString(),
         });
       }
-      setRatingStatus('done');
-    } catch (error: any) {
-      console.warn("評分儲存失敗:", error.message);
-      setRatingStatus('done');
-    }
-  };
-
-  const handleDeleteCandidate = async (id: string) => {
-    try {
-      await deleteDoc(doc(db, "candidates", id));
-      setCandidatesList(prev => prev.filter(c => c.id !== id));
-      setDeleteConfirmId(null);
-      setExpandedCardId(null);
-    } catch (error: any) {
-      console.warn("刪除失敗:", error.message);
-      alert("刪除失敗，請確認 Firebase 權限設定。");
-    }
+    } catch (e) { /* silent */ }
+    setRatingStatus('done');
   };
 
   const openEditModal = (candidate: any) => {
@@ -550,21 +609,26 @@ export default function App() {
     if (!editingCandidate) return;
     setIsSavingEdit(true);
     try {
-      const updates: any = {
+      const updates = {
         interview_grade: editGrade,
         interview_note: editNote,
         interviewer_name: editInterviewerName,
-        rated_at: new Date().toISOString()
+        rated_at: new Date().toISOString(),
       };
-      await updateDoc(doc(db, "candidates", editingCandidate.id), updates);
-      setCandidatesList(prev => prev.map(c => c.id === editingCandidate.id ? { ...c, ...updates } : c));
+      await updateDoc(doc(db, 'candidates', editingCandidate.id), updates);
+      setCandidatesList((prev: any[]) => prev.map(c => c.id === editingCandidate.id ? { ...c, ...updates } : c));
       setEditingCandidate(null);
-    } catch (error: any) {
-      console.warn("編輯失敗:", error.message);
-      alert("儲存失敗，請確認 Firebase 權限設定。");
-    } finally {
-      setIsSavingEdit(false);
-    }
+    } catch (e: any) { alert('儲存失敗: ' + e.message); }
+    setIsSavingEdit(false);
+  };
+
+  const handleDeleteCandidate = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'candidates', id));
+      setCandidatesList((prev: any[]) => prev.filter(c => c.id !== id));
+      setDeleteConfirmId(null);
+      setExpandedCardId(null);
+    } catch (e: any) { alert('刪除失敗: ' + e.message); }
   };
 
   const handleAddQuestion = () => {
@@ -631,24 +695,13 @@ export default function App() {
         try {
           const querySnapshot = await getDocs(collection(db, "candidates"));
           const list: any[] = [];
-          querySnapshot.forEach((docSnap) => {
-            try {
-              list.push({ id: docSnap.id, ...docSnap.data() });
-            } catch {
-              // 跳過讀取失敗的單筆資料
-            }
+          querySnapshot.forEach((doc) => {
+            list.push({ id: doc.id, ...doc.data() });
           });
-          list.sort((a, b) => {
-            try {
-              return new Date(b.submitted_at || 0).getTime() - new Date(a.submitted_at || 0).getTime();
-            } catch {
-              return 0;
-            }
-          });
+          list.sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime());
           setCandidatesList(list);
         } catch (error: any) {
-          console.warn("載入名單失敗:", error?.message || error);
-          setCandidatesList([]);
+          console.warn("載入名單失敗:", error.message);
         } finally {
           setIsLoadingCandidates(false);
         }
@@ -661,7 +714,7 @@ export default function App() {
     ? candidatesList
     : candidatesList.filter(c => c.applied_branch === adminEmployeeTab);
 
-  const inputClassName = "focus:ring-2 focus:ring-zinc-900 focus:border-zinc-900 block w-full pl-11 sm:text-sm border-transparent bg-zinc-100 rounded-2xl py-3.5 transition-all hover:bg-zinc-200 focus:bg-white text-zinc-900 font-semibold placeholder:text-zinc-400 placeholder:font-normal";
+  const inputClassName = "focus:ring-2 focus:ring-zinc-900 focus:border-zinc-900 block w-full pl-11 sm:text-sm border-transparent bg-zinc-100 rounded-2xl py-3.5 transition-all hover:bg-zinc-200 focus:bg-white";
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] font-sans pb-12 relative">
@@ -751,91 +804,6 @@ export default function App() {
         </div>
       )}
 
-      {/* ===== 編輯評分 Modal ===== */}
-      {editingCandidate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-[2rem] p-7 w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
-            {/* 標題 */}
-            <div className="flex items-center mb-6">
-              <div className="w-12 h-12 rounded-full bg-zinc-100 flex items-center justify-center mr-3">
-                <ClipboardCheck className="w-6 h-6 text-zinc-900" />
-              </div>
-              <div>
-                <h3 className="text-lg font-extrabold text-zinc-900 tracking-tight">編輯評分資料</h3>
-                <p className="text-xs text-zinc-400 font-medium">應徵者：{editingCandidate.candidate_name}</p>
-              </div>
-            </div>
-
-            <div className="space-y-5">
-              {/* 面試官姓名 */}
-              <div>
-                <label className="block text-xs font-bold text-zinc-500 uppercase tracking-widest mb-2">面試官姓名</label>
-                <input
-                  type="text"
-                  value={editInterviewerName}
-                  onChange={(e: any) => setEditInterviewerName(e.target.value)}
-                  className="focus:ring-2 focus:ring-zinc-900 block w-full sm:text-sm border-transparent bg-zinc-100 rounded-2xl py-3.5 px-4 transition-all focus:bg-white"
-                  placeholder="面試官姓名"
-                />
-              </div>
-
-              {/* 等級評分 */}
-              <div>
-                <label className="block text-xs font-bold text-zinc-500 uppercase tracking-widest mb-3">等級評分</label>
-                <div className="grid grid-cols-2 gap-2.5">
-                  {GRADE_OPTIONS.map(g => (
-                    <button
-                      key={g.value}
-                      type="button"
-                      onClick={() => setEditGrade(g.value)}
-                      className={`relative p-3.5 rounded-2xl border-2 text-left transition-all active:scale-95 ${
-                        editGrade === g.value ? `${g.lightColor} border-current shadow-sm` : 'bg-zinc-50 border-zinc-200 hover:border-zinc-300'
-                      }`}
-                    >
-                      <div className="flex items-center mb-1">
-                        <span className={`w-7 h-7 rounded-full ${g.color} text-white font-extrabold text-xs flex items-center justify-center mr-2 shadow-sm`}>{g.value}</span>
-                        <span className={`font-bold text-sm ${editGrade === g.value ? '' : 'text-zinc-700'}`}>{g.label}</span>
-                      </div>
-                      <p className={`text-xs font-medium ${editGrade === g.value ? 'opacity-70' : 'text-zinc-400'}`}>{g.desc}</p>
-                      {editGrade === g.value && <CheckCircle className="absolute top-2.5 right-2.5 w-4 h-4" />}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* 評語 */}
-              <div>
-                <label className="block text-xs font-bold text-zinc-500 uppercase tracking-widest mb-2">評語備註</label>
-                <textarea
-                  value={editNote}
-                  onChange={(e: any) => setEditNote(e.target.value)}
-                  rows={4}
-                  placeholder="填寫對應徵者的整體評語（選填）..."
-                  className="focus:ring-2 focus:ring-zinc-900 block w-full sm:text-sm border-transparent bg-zinc-100 rounded-2xl py-3.5 px-4 transition-all focus:bg-white resize-none"
-                />
-              </div>
-            </div>
-
-            {/* 按鈕列 */}
-            <div className="flex space-x-3 mt-7">
-              <button
-                type="button"
-                onClick={() => setEditingCandidate(null)}
-                className="flex-1 py-3.5 rounded-full bg-zinc-100 text-zinc-700 font-bold hover:bg-zinc-200 active:scale-95 transition-all"
-              >取消</button>
-              <button
-                type="button"
-                onClick={handleSaveEdit}
-                disabled={isSavingEdit}
-                className="flex-1 py-3.5 rounded-full bg-zinc-900 text-white font-bold hover:bg-zinc-800 active:scale-95 transition-all shadow-md disabled:opacity-60 flex items-center justify-center"
-              >
-                {isSavingEdit ? <><Loader2 className="animate-spin w-4 h-4 mr-2" />儲存中...</> : <><SaveIcon className="w-4 h-4 mr-2" />儲存變更</>}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       <div className="max-w-3xl mx-auto pt-16 px-4 sm:px-6">
         {currentView === 'admin' ? (
           /* ========================================================================================= */
@@ -860,7 +828,7 @@ export default function App() {
             <div className="flex space-x-3 mb-6">
               <button 
                 onClick={() => setAdminMainTab('settings')}
-                className={`flex-1 py-4 font-bold text-base rounded-[1.5rem] transition-all flex items-center justify-center ${adminMainTab === 'settings' ? 'bg-zinc-900 text-white shadow-md' : 'bg-white text-zinc-500 border border-zinc-200 hover:bg-zinc-50'}`}
+                className={`flex-1 py-4 font-bold text-lg rounded-[1.5rem] transition-all flex items-center justify-center ${adminMainTab === 'settings' ? 'bg-zinc-900 text-white shadow-md' : 'bg-white text-zinc-500 border border-zinc-200 hover:bg-zinc-50'}`}
               >
                 <SettingsIcon className="w-5 h-5 mr-2" /> 面試單設定
               </button>
@@ -1147,126 +1115,82 @@ export default function App() {
                   ) : (
                     <div className="space-y-3">
                       {filteredCandidates.map(candidate => {
-                        const gradeInfo = GRADE_OPTIONS.find(g => g.value === candidate?.interview_grade);
-                        const isExpanded = expandedCardId === candidate.id;
-                        const isConfirmingDelete = deleteConfirmId === candidate.id;
+                        const g = GRADE_OPTIONS.find(x => x.value === (candidate.interview_grade || ''));
+                        const isOpen = expandedCardId === candidate.id;
+                        const isDeleting = deleteConfirmId === candidate.id;
                         return (
-                          <div key={candidate.id} className={`rounded-3xl border transition-all overflow-hidden ${isExpanded ? 'border-zinc-300 shadow-md' : 'border-zinc-100 hover:border-zinc-200'}`}>
-                            {/* 卡片標題列（點擊展開） */}
-                            <button
-                              type="button"
-                              onClick={() => { setExpandedCardId(isExpanded ? null : candidate.id); setDeleteConfirmId(null); }}
-                              className="w-full bg-zinc-50 hover:bg-zinc-100 transition-colors px-5 py-4 flex items-center justify-between text-left"
-                            >
-                              <div className="flex items-center space-x-3 min-w-0">
-                                {gradeInfo ? (
-                                  <span className={`w-9 h-9 rounded-full ${gradeInfo.color} text-white font-extrabold text-sm flex items-center justify-center flex-shrink-0 shadow-sm`}>
-                                    {gradeInfo.value}
-                                  </span>
-                                ) : (
-                                  <span className="w-9 h-9 rounded-full bg-zinc-200 text-zinc-400 font-extrabold text-xs flex items-center justify-center flex-shrink-0">?</span>
-                                )}
+                          <div key={candidate.id} className={`rounded-2xl border overflow-hidden transition-all ${isOpen ? 'border-zinc-300 shadow-sm' : 'border-zinc-100'}`}>
+                            {/* 標題列 */}
+                            <button type="button" onClick={() => { setExpandedCardId(isOpen ? null : candidate.id); setDeleteConfirmId(null); }}
+                              className="w-full bg-zinc-50 hover:bg-zinc-100 px-5 py-4 flex items-center justify-between text-left transition-colors">
+                              <div className="flex items-center gap-3 min-w-0">
+                                {g
+                                  ? <span className={`w-9 h-9 rounded-full ${g.color} text-white font-extrabold text-sm flex items-center justify-center flex-shrink-0`}>{g.value}</span>
+                                  : <span className="w-9 h-9 rounded-full bg-zinc-200 text-zinc-400 text-xs font-bold flex items-center justify-center flex-shrink-0">?</span>
+                                }
                                 <div className="min-w-0">
                                   <p className="font-bold text-zinc-900 text-sm truncate">{candidate.candidate_name}</p>
-                                  <p className="text-xs text-zinc-500 font-medium truncate">
-                                    {candidate.applied_branch} · {candidate.applied_position === 'waiter' ? '外場' : candidate.applied_position === 'kitchen' ? '內場' : candidate.applied_position === 'store_manager' ? '店長' : candidate.applied_position}
-                                  </p>
+                                  <p className="text-xs text-zinc-500 truncate">{candidate.applied_branch} · {candidate.applied_position === 'waiter' ? '外場' : candidate.applied_position === 'kitchen' ? '內場' : '店長'}</p>
                                 </div>
                               </div>
-                              <div className="flex items-center space-x-2 flex-shrink-0 ml-3">
-                                {gradeInfo ? (
-                                  <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${gradeInfo.lightColor} hidden sm:inline-flex`}>{gradeInfo.value} 級 · {gradeInfo.desc}</span>
-                                ) : (
-                                  <span className="text-xs font-bold text-zinc-400 bg-white border border-zinc-200 px-2.5 py-1 rounded-full hidden sm:inline-flex">待評分</span>
-                                )}
-                                <ChevronRight className={`w-4 h-4 text-zinc-400 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} />
+                              <div className="flex items-center gap-2 ml-3 flex-shrink-0">
+                                {g ? <span className={`text-xs font-bold px-2.5 py-1 rounded-full border hidden sm:block ${g.light}`}>{g.desc}</span>
+                                   : <span className="text-xs font-bold text-zinc-400 border border-zinc-200 px-2.5 py-1 rounded-full hidden sm:block">待評分</span>}
+                                <ChevronRight className={`w-4 h-4 text-zinc-400 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
                               </div>
                             </button>
-
                             {/* 展開內容 */}
-                            {isExpanded && (
+                            {isOpen && (
                               <div className="bg-white border-t border-zinc-100 px-5 pb-5 pt-4 space-y-4">
-                                {/* 基本資訊 pills */}
                                 <div className="flex flex-wrap gap-2">
                                   <span className="text-xs font-semibold bg-zinc-100 text-zinc-700 px-3 py-1.5 rounded-full">{candidate.candidate_phone}</span>
                                   <span className="text-xs font-semibold bg-zinc-100 text-zinc-700 px-3 py-1.5 rounded-full">提交：{candidate.submitted_at ? new Date(candidate.submitted_at).toLocaleString() : '—'}</span>
                                 </div>
-
-                                {/* 評分區塊 */}
-                                {candidate.interview_grade && gradeInfo ? (
-                                  <div className={`p-4 rounded-2xl border ${gradeInfo.lightColor}`}>
+                                {/* 評分 */}
+                                {g ? (
+                                  <div className={`p-4 rounded-2xl border ${g.light}`}>
                                     <div className="flex items-center justify-between mb-2">
-                                      <div className="flex items-center">
-                                        <ClipboardCheck className="w-4 h-4 mr-1.5 opacity-70" />
-                                        <span className="text-xs font-bold uppercase tracking-wide opacity-70">面試官評分</span>
-                                      </div>
-                                      <span className="text-xs font-semibold opacity-60">{candidate.interviewer_name} · {candidate.interviewer_branch}</span>
+                                      <div className="flex items-center gap-1.5"><ClipboardCheck className="w-4 h-4 opacity-60" /><span className="text-xs font-bold opacity-60">面試官評分</span></div>
+                                      <span className="text-xs opacity-60">{candidate.interviewer_name} · {candidate.interviewer_branch}</span>
                                     </div>
-                                    <div className="flex items-center mb-1">
-                                      <span className={`w-10 h-10 rounded-full ${gradeInfo.color} text-white font-extrabold text-lg flex items-center justify-center mr-3 shadow-sm`}>{candidate.interview_grade}</span>
+                                    <div className="flex items-center gap-3">
+                                      <span className={`w-10 h-10 rounded-full ${g.color} text-white font-extrabold text-lg flex items-center justify-center`}>{g.value}</span>
                                       <div>
-                                        <p className="font-bold text-sm">{gradeInfo.label} — {gradeInfo.desc}</p>
-                                        {candidate.rated_at && <p className="text-xs opacity-60 mt-0.5">評分時間：{new Date(candidate.rated_at).toLocaleString()}</p>}
+                                        <p className="font-bold text-sm">{g.label} — {g.desc}</p>
+                                        {candidate.rated_at && <p className="text-xs opacity-60">{new Date(candidate.rated_at).toLocaleString()}</p>}
                                       </div>
                                     </div>
-                                    {candidate.interview_note && (
-                                      <div className="mt-3 pt-3 border-t border-current border-opacity-20">
-                                        <p className="text-xs font-bold opacity-60 mb-1">評語：</p>
-                                        <p className="text-sm font-semibold leading-relaxed whitespace-pre-wrap opacity-90">{candidate.interview_note}</p>
-                                      </div>
-                                    )}
+                                    {candidate.interview_note && <p className="mt-3 pt-3 border-t border-current border-opacity-20 text-sm whitespace-pre-wrap">{candidate.interview_note}</p>}
                                   </div>
                                 ) : (
-                                  <div className="p-4 rounded-2xl bg-zinc-50 border border-dashed border-zinc-200 text-center">
-                                    <p className="text-sm text-zinc-400 font-medium">此應徵者尚未完成評分</p>
-                                  </div>
+                                  <div className="p-4 rounded-2xl bg-zinc-50 border border-dashed border-zinc-200 text-center text-sm text-zinc-400">尚未評分</div>
                                 )}
-
-                                {/* 面試問答 */}
-                                {candidate.custom_answers && candidate.custom_answers.length > 0 && (
+                                {/* 問答 */}
+                                {(candidate.custom_answers || []).length > 0 && (
                                   <div className="space-y-3 pt-2 border-t border-zinc-100">
-                                    <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest pt-2">面試問答</p>
-                                    {candidate.custom_answers.map((ans: any, idx: number) => (
+                                    {(candidate.custom_answers || []).map((ans: any, idx: number) => (
                                       <div key={idx}>
-                                        <p className="text-xs font-bold text-zinc-600 mb-1">Q{idx+1}. {ans.question}</p>
-                                        <p className="text-sm font-semibold text-zinc-800 bg-zinc-50 p-3 rounded-2xl border border-zinc-200 leading-relaxed whitespace-pre-wrap">
-                                          {ans.answer || <span className="text-zinc-400 font-normal">無回答</span>}
-                                        </p>
+                                        <p className="text-xs font-bold text-zinc-500 mb-1">Q{idx+1}. {ans.question}</p>
+                                        <p className="text-sm font-semibold text-zinc-800 bg-zinc-50 p-3 rounded-xl border border-zinc-200 whitespace-pre-wrap">{ans.answer || <span className="text-zinc-400 font-normal">無回答</span>}</p>
                                       </div>
                                     ))}
                                   </div>
                                 )}
-
-                                {/* 編輯 / 刪除 按鈕列 */}
+                                {/* 編輯 / 刪除 */}
                                 <div className="pt-3 border-t border-zinc-100 flex items-center justify-between">
-                                  <button
-                                    type="button"
-                                    onClick={() => openEditModal(candidate)}
-                                    className="flex items-center px-5 py-2.5 bg-zinc-900 text-white text-sm font-bold rounded-full hover:bg-zinc-700 active:scale-95 transition-all shadow-sm"
-                                  >
+                                  <button type="button" onClick={() => openEditModal(candidate)}
+                                    className="flex items-center px-5 py-2.5 bg-zinc-900 text-white text-sm font-bold rounded-full hover:bg-zinc-700 active:scale-95 transition-all">
                                     <SaveIcon className="w-4 h-4 mr-1.5" />編輯評分
                                   </button>
-
-                                  {isConfirmingDelete ? (
-                                    <div className="flex items-center space-x-2">
+                                  {isDeleting ? (
+                                    <div className="flex items-center gap-2">
                                       <span className="text-xs font-bold text-red-600">確定刪除？</span>
-                                      <button
-                                        type="button"
-                                        onClick={() => handleDeleteCandidate(candidate.id)}
-                                        className="px-4 py-2 bg-red-500 text-white text-xs font-bold rounded-full hover:bg-red-600 active:scale-95 transition-all"
-                                      >確定</button>
-                                      <button
-                                        type="button"
-                                        onClick={() => setDeleteConfirmId(null)}
-                                        className="px-4 py-2 bg-zinc-100 text-zinc-600 text-xs font-bold rounded-full hover:bg-zinc-200 active:scale-95 transition-all"
-                                      >取消</button>
+                                      <button type="button" onClick={() => handleDeleteCandidate(candidate.id)} className="px-4 py-2 bg-red-500 text-white text-xs font-bold rounded-full">確定</button>
+                                      <button type="button" onClick={() => setDeleteConfirmId(null)} className="px-4 py-2 bg-zinc-100 text-zinc-600 text-xs font-bold rounded-full">取消</button>
                                     </div>
                                   ) : (
-                                    <button
-                                      type="button"
-                                      onClick={() => setDeleteConfirmId(candidate.id)}
-                                      className="flex items-center px-5 py-2.5 bg-red-50 text-red-500 border border-red-200 text-sm font-bold rounded-full hover:bg-red-100 active:scale-95 transition-all"
-                                    >
+                                    <button type="button" onClick={() => setDeleteConfirmId(candidate.id)}
+                                      className="flex items-center px-5 py-2.5 bg-red-50 text-red-500 border border-red-200 text-sm font-bold rounded-full hover:bg-red-100 active:scale-95 transition-all">
                                       <Trash2 className="w-4 h-4 mr-1.5" />刪除
                                     </button>
                                   )}
@@ -1282,101 +1206,62 @@ export default function App() {
               </div>
             )}
 
-            {/* ======================================================= */}
-            {/* 分頁 3: 評分總覽 (A/B/C/D 各一區塊)                       */}
-            {/* ======================================================= */}
+            {/* 分頁 3: 評分總覽 */}
             {adminMainTab === 'ratings' && (
-              <div className="animate-in slide-in-from-bottom-2 fade-in pt-2 space-y-5">
+              <div className="space-y-5 pt-2">
                 {isLoadingCandidates ? (
-                  <div className="py-20 text-center text-zinc-400 font-medium bg-white rounded-3xl border border-zinc-100 flex flex-col items-center shadow-sm">
-                    <Loader2 className="animate-spin w-8 h-8 mb-4 text-zinc-400" />
-                    正在從 Firebase 載入資料...
-                  </div>
+                  <div className="py-20 text-center text-zinc-400 flex flex-col items-center"><Loader2 className="animate-spin w-8 h-8 mb-3" />載入中...</div>
                 ) : candidatesList.filter(c => c.interview_grade).length === 0 ? (
-                  <div className="py-20 text-center bg-white rounded-3xl border border-dashed border-zinc-200 shadow-sm">
-                    <ClipboardCheck className="w-10 h-10 text-zinc-200 mx-auto mb-3" />
-                    <p className="text-zinc-400 font-medium">目前尚無任何評分紀錄</p>
+                  <div className="py-20 text-center bg-white rounded-3xl border border-dashed border-zinc-200">
+                    <p className="text-zinc-400">目前尚無任何評分紀錄</p>
                   </div>
                 ) : (
                   <>
-                    {/* 統計橫幅 */}
                     <div className="grid grid-cols-4 gap-3">
                       {GRADE_OPTIONS.map(g => {
-                        const count = candidatesList.filter(c => c.interview_grade === g.value).length;
+                        const cnt = candidatesList.filter(c => c.interview_grade === g.value).length;
                         return (
-                          <div key={g.value} className={`p-4 rounded-2xl border text-center ${count > 0 ? g.lightColor : 'bg-zinc-50 border-zinc-100'}`}>
-                            <span className={`w-10 h-10 rounded-full ${count > 0 ? g.color : 'bg-zinc-200'} text-white font-extrabold text-lg flex items-center justify-center mx-auto mb-2 shadow-sm`}>
-                              {g.value}
-                            </span>
-                            <p className={`text-2xl font-extrabold ${count > 0 ? '' : 'text-zinc-300'}`}>{count}</p>
-                            <p className={`text-xs font-semibold mt-0.5 ${count > 0 ? 'opacity-70' : 'text-zinc-300'}`}>人</p>
+                          <div key={g.value} className={`p-4 rounded-2xl border text-center ${cnt > 0 ? g.light : 'bg-zinc-50 border-zinc-100'}`}>
+                            <span className={`w-10 h-10 rounded-full ${cnt > 0 ? g.color : 'bg-zinc-200'} text-white font-extrabold text-lg flex items-center justify-center mx-auto mb-2`}>{g.value}</span>
+                            <p className={`text-2xl font-extrabold ${cnt === 0 ? 'text-zinc-300' : ''}`}>{cnt}</p>
+                            <p className={`text-xs mt-0.5 ${cnt === 0 ? 'text-zinc-300' : 'opacity-70'}`}>人</p>
                           </div>
                         );
                       })}
                     </div>
-
-                    {/* A/B/C/D 各區塊 */}
                     {GRADE_OPTIONS.map(g => {
                       const group = candidatesList.filter(c => c.interview_grade === g.value);
-                      if (group.length === 0) return null;
+                      if (!group.length) return null;
                       return (
-                        <div key={g.value} className="bg-white rounded-[2rem] border border-zinc-100 shadow-sm overflow-hidden">
-                          <div className={`px-6 py-4 flex items-center ${g.lightColor} border-b border-current border-opacity-20`}>
-                            <span className={`w-10 h-10 rounded-full ${g.color} text-white font-extrabold text-lg flex items-center justify-center mr-3 shadow-sm`}>
-                              {g.value}
-                            </span>
-                            <div>
-                              <p className="font-extrabold text-base">{g.label} — {g.desc}</p>
-                              <p className="text-xs opacity-60 font-medium">共 {group.length} 人</p>
-                            </div>
+                        <div key={g.value} className="bg-white rounded-[2rem] border border-zinc-100 overflow-hidden">
+                          <div className={`px-6 py-4 flex items-center gap-3 border-b border-current border-opacity-20 ${g.light}`}>
+                            <span className={`w-10 h-10 rounded-full ${g.color} text-white font-extrabold text-lg flex items-center justify-center`}>{g.value}</span>
+                            <div><p className="font-extrabold">{g.label} — {g.desc}</p><p className="text-xs opacity-60">共 {group.length} 人</p></div>
                           </div>
                           <div className="divide-y divide-zinc-50">
                             {group.map(candidate => {
-                              const isExpanded = expandedCardId === `r-${candidate.id}`;
+                              const rid = 'r-' + candidate.id;
+                              const isOpen = expandedCardId === rid;
                               return (
                                 <div key={candidate.id}>
-                                  <button
-                                    type="button"
-                                    onClick={() => setExpandedCardId(isExpanded ? null : `r-${candidate.id}`)}
-                                    className="w-full px-6 py-4 flex items-center justify-between hover:bg-zinc-50 transition-colors text-left"
-                                  >
-                                    <div className="flex items-center space-x-3 min-w-0">
-                                      <div className="w-9 h-9 rounded-full bg-zinc-100 flex items-center justify-center flex-shrink-0">
-                                        <User className="w-4 h-4 text-zinc-500" />
-                                      </div>
-                                      <div className="min-w-0">
-                                        <p className="font-bold text-zinc-900 text-sm">{candidate.candidate_name}</p>
-                                        <p className="text-xs text-zinc-400 font-medium truncate">
-                                          {candidate.interviewer_branch || candidate.applied_branch} · 面試官：{candidate.interviewer_name || '未填'}
-                                        </p>
+                                  <button type="button" onClick={() => setExpandedCardId(isOpen ? null : rid)}
+                                    className="w-full px-6 py-4 flex items-center justify-between hover:bg-zinc-50 transition-colors text-left">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                      <div className="w-9 h-9 rounded-full bg-zinc-100 flex items-center justify-center flex-shrink-0"><User className="w-4 h-4 text-zinc-500" /></div>
+                                      <div><p className="font-bold text-zinc-900 text-sm">{candidate.candidate_name}</p>
+                                        <p className="text-xs text-zinc-400">{candidate.interviewer_branch || candidate.applied_branch} · 面試官：{candidate.interviewer_name || '未填'}</p>
                                       </div>
                                     </div>
-                                    <div className="flex items-center space-x-2 flex-shrink-0 ml-3">
-                                      <span className="text-xs text-zinc-400 font-medium hidden sm:block">
-                                        {candidate.applied_position === 'waiter' ? '外場' : candidate.applied_position === 'kitchen' ? '內場' : candidate.applied_position === 'store_manager' ? '店長' : candidate.applied_position}
-                                      </span>
-                                      <ChevronRight className={`w-4 h-4 text-zinc-400 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} />
-                                    </div>
+                                    <ChevronRight className={`w-4 h-4 text-zinc-400 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
                                   </button>
-                                  {isExpanded && (
-                                    <div className={`mx-4 mb-4 p-4 rounded-2xl border animate-in fade-in duration-200 ${g.lightColor}`}>
+                                  {isOpen && (
+                                    <div className={`mx-4 mb-4 p-4 rounded-2xl border ${g.light}`}>
                                       <div className="flex flex-wrap gap-2 mb-3">
-                                        <span className="text-xs font-semibold bg-white bg-opacity-60 px-3 py-1 rounded-full opacity-80">{candidate.candidate_phone}</span>
-                                        <span className="text-xs font-semibold bg-white bg-opacity-60 px-3 py-1 rounded-full opacity-80">{candidate.applied_branch} 應徵</span>
-                                        {candidate.rated_at && (
-                                          <span className="text-xs font-semibold bg-white bg-opacity-60 px-3 py-1 rounded-full opacity-80">
-                                            評分：{new Date(candidate.rated_at).toLocaleString()}
-                                          </span>
-                                        )}
+                                        <span className="text-xs font-semibold bg-white bg-opacity-60 px-3 py-1 rounded-full">{candidate.candidate_phone}</span>
+                                        <span className="text-xs font-semibold bg-white bg-opacity-60 px-3 py-1 rounded-full">{candidate.applied_branch}</span>
+                                        {candidate.rated_at && <span className="text-xs bg-white bg-opacity-60 px-3 py-1 rounded-full">{new Date(candidate.rated_at).toLocaleString()}</span>}
                                       </div>
-                                      {candidate.interview_note ? (
-                                        <div>
-                                          <p className="text-xs font-bold opacity-60 mb-1">面試官評語：</p>
-                                          <p className="text-sm font-medium leading-relaxed whitespace-pre-wrap opacity-90">{candidate.interview_note}</p>
-                                        </div>
-                                      ) : (
-                                        <p className="text-sm opacity-50 font-medium">（無評語）</p>
-                                      )}
+                                      <p className="text-sm whitespace-pre-wrap">{candidate.interview_note || '（無評語）'}</p>
                                     </div>
                                   )}
                                 </div>
@@ -1388,6 +1273,53 @@ export default function App() {
                     })}
                   </>
                 )}
+              </div>
+            )}
+
+            {/* 編輯評分 Modal */}
+            {editingCandidate && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+                <div className="bg-white rounded-[2rem] p-7 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto">
+                  <div className="flex items-center mb-6">
+                    <div className="w-12 h-12 rounded-full bg-zinc-100 flex items-center justify-center mr-3"><ClipboardCheck className="w-6 h-6 text-zinc-900" /></div>
+                    <div><h3 className="text-lg font-extrabold text-zinc-900">編輯評分資料</h3><p className="text-xs text-zinc-400">{editingCandidate.candidate_name}</p></div>
+                  </div>
+                  <div className="space-y-5">
+                    <div>
+                      <label className="block text-xs font-bold text-zinc-500 uppercase tracking-widest mb-2">面試官姓名</label>
+                      <input type="text" value={editInterviewerName} onChange={(e:any) => setEditInterviewerName(e.target.value)}
+                        className="w-full bg-zinc-100 rounded-2xl py-3.5 px-4 text-sm font-semibold text-zinc-900 border-transparent focus:ring-2 focus:ring-zinc-900 focus:bg-white" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-zinc-500 uppercase tracking-widest mb-3">等級評分</label>
+                      <div className="grid grid-cols-2 gap-2.5">
+                        {GRADE_OPTIONS.map(g => (
+                          <button key={g.value} type="button" onClick={() => setEditGrade(g.value)}
+                            className={`relative p-3.5 rounded-2xl border-2 text-left transition-all active:scale-95 ${editGrade === g.value ? `${g.light} border-current` : 'bg-zinc-50 border-zinc-200'}`}>
+                            <div className="flex items-center mb-1">
+                              <span className={`w-7 h-7 rounded-full ${g.color} text-white font-extrabold text-xs flex items-center justify-center mr-2`}>{g.value}</span>
+                              <span className="font-bold text-sm">{g.label}</span>
+                            </div>
+                            <p className="text-xs text-zinc-400">{g.desc}</p>
+                            {editGrade === g.value && <CheckCircle className="absolute top-2.5 right-2.5 w-4 h-4" />}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-zinc-500 uppercase tracking-widest mb-2">評語備註</label>
+                      <textarea value={editNote} onChange={(e:any) => setEditNote(e.target.value)} rows={4}
+                        className="w-full bg-zinc-100 rounded-2xl py-3.5 px-4 text-sm font-semibold text-zinc-900 border-transparent focus:ring-2 focus:ring-zinc-900 focus:bg-white resize-none" />
+                    </div>
+                  </div>
+                  <div className="flex gap-3 mt-6">
+                    <button type="button" onClick={() => setEditingCandidate(null)} className="flex-1 py-3.5 rounded-full bg-zinc-100 text-zinc-700 font-bold">取消</button>
+                    <button type="button" onClick={handleSaveEdit} disabled={isSavingEdit}
+                      className="flex-1 py-3.5 rounded-full bg-zinc-900 text-white font-bold disabled:opacity-60 flex items-center justify-center gap-2">
+                      {isSavingEdit ? <><Loader2 className="animate-spin w-4 h-4" />儲存中...</> : <><SaveIcon className="w-4 h-4" />儲存</>}
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -1431,23 +1363,29 @@ export default function App() {
             </div>
 
             {status === 'success' ? (
-              <div className="rounded-[2rem] bg-zinc-50 p-10 text-center border border-zinc-100 animate-in fade-in zoom-in duration-300 mt-4">
-                <div className="mx-auto flex items-center justify-center h-20 w-20 rounded-full bg-white shadow-sm mb-6">
-                  <CheckCircle className="h-10 w-10 text-zinc-900" aria-hidden="true" />
+              ratingStatus === 'done' ? (
+                <div className="rounded-[2rem] bg-zinc-50 p-10 text-center border border-zinc-100 animate-in fade-in zoom-in duration-300 mt-4">
+                  <div className="mx-auto flex items-center justify-center h-20 w-20 rounded-full bg-emerald-100 mb-6">
+                    <CheckCircle className="h-10 w-10 text-emerald-600" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-zinc-900 mb-3">面試流程完成！</h3>
+                  <p className="text-sm text-zinc-500 mb-8">感謝 <strong>{formData.name}</strong> 參與本次面試，評分已記錄至系統。</p>
+                  <button type="button" onClick={resetForm} className="inline-flex items-center px-8 py-4 text-sm font-bold rounded-full text-white bg-zinc-900 hover:bg-zinc-800 transition-all">
+                    下一位應徵者 <ArrowRight className="ml-2 h-4 w-4" />
+                  </button>
                 </div>
-                <h3 className="text-2xl font-bold text-zinc-900 mb-3 tracking-tight">送出成功！</h3>
-                <p className="text-sm font-medium text-zinc-500 mb-8 max-w-sm mx-auto leading-relaxed">
-                  親愛的 <strong>{formData.name}</strong>，您的資料已同步至雲端系統，請準備開始線上測驗。
-                </p>
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  className="inline-flex items-center px-8 py-4 text-sm font-bold rounded-full shadow-md text-white bg-zinc-900 hover:bg-zinc-800 transition-all active:scale-[0.98]"
-                >
-                  返回首頁
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </button>
-              </div>
+              ) : (
+                <div className="mt-4 space-y-6 pb-10">
+                  <div className="text-center pt-8 pb-4">
+                    <div className="w-16 h-16 bg-zinc-900 rounded-full mx-auto flex items-center justify-center mb-4">
+                      <ClipboardCheck className="w-8 h-8 text-white" />
+                    </div>
+                    <h2 className="text-2xl font-extrabold text-zinc-900 mb-1">面試官評分</h2>
+                    <p className="text-sm text-zinc-500">應徵者 <strong>{formData.name}</strong> 已完成填寫</p>
+                  </div>
+                  <RatingPanel branches={customBranches} onComplete={handleRatingComplete} />
+                </div>
+              )
             ) : (
               <form className="space-y-10" onSubmit={handleSubmit}>
                 
@@ -1559,7 +1497,7 @@ export default function App() {
                               rows={4}
                               value={formData.answers[q.id] || ''}
                               onChange={(e: any) => handleAnswerChange(q.id, e.target.value)}
-                              className="focus:ring-2 focus:ring-zinc-900 block w-full sm:text-sm border-transparent bg-zinc-100 rounded-3xl py-4 px-5 transition-all focus:bg-white resize-none text-zinc-900 font-semibold placeholder:text-zinc-400 placeholder:font-normal"
+                              className="focus:ring-2 focus:ring-zinc-900 block w-full sm:text-sm border-transparent bg-zinc-100 rounded-3xl py-4 px-5 transition-all focus:bg-white resize-none"
                               placeholder="請在此輸入您的回答..."
                             />
                           ) : (
@@ -1568,7 +1506,7 @@ export default function App() {
                               required={q.required}
                               value={formData.answers[q.id] || ''}
                               onChange={(e: any) => handleAnswerChange(q.id, e.target.value)}
-                              className="focus:ring-2 focus:ring-zinc-900 block w-full sm:text-sm border-transparent bg-zinc-100 rounded-2xl py-3.5 px-5 transition-all focus:bg-white text-zinc-900 font-semibold placeholder:text-zinc-400 placeholder:font-normal"
+                              className="focus:ring-2 focus:ring-zinc-900 block w-full sm:text-sm border-transparent bg-zinc-100 rounded-2xl py-3.5 px-5 transition-all focus:bg-white"
                               placeholder="請輸入簡短回答..."
                             />
                           )}
