@@ -53,6 +53,7 @@ const LogOut = (p: any) => <SvgIcon path={<><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2
 const SaveIcon = (p: any) => <SvgIcon path={<><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></>} {...p} />;
 const ImageIcon = (p: any) => <SvgIcon path={<><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></>} {...p} />;
 const MapPin = (p: any) => <SvgIcon path={<><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></>} {...p} />;
+const Calendar = (p: any) => <SvgIcon path={<><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></>} {...p} />;
 const Users = (p: any) => <SvgIcon path={<><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>} {...p} />;
 
 const ClipboardCheck = (p: any) => <SvgIcon path={<><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></> } {...p} />;
@@ -396,7 +397,8 @@ export default function App() {
   const defaultHeader = {
     title: "Thrilled to Join\nOur Team!",
     description: "歡迎來到美味餐飲集團！請填寫以下面試資料，為您的招募旅程踏出第一步。",
-    logoUrl: "" 
+    logoUrl: "",
+    consentText: "我瞭解並同意貴公司為「人才招募」目的，蒐集、處理我的個人資料，未經同意不外流。"
   };
   const [headerContent, setHeaderContent] = useState<any>(defaultHeader);
   const [draftHeaderContent, setDraftHeaderContent] = useState<any>(defaultHeader);
@@ -419,7 +421,7 @@ export default function App() {
   const [showUnsavedModal, setShowUnsavedModal] = useState<boolean>(false);
 
   const [newQuestion, setNewQuestion] = useState<any>({ text: '', type: 'text', required: true });
-  const [formData, setFormData] = useState<any>({ name: '', phone: '', position: '', branch: '', answers: {}, consent: false });
+  const [formData, setFormData] = useState<any>({ name: '', phone: '', position: '', branch: '', gender: '', address: '', birthday: '', answers: {}, consent: false });
   const [status, setStatus] = useState<string>('idle');
   const [errorMessage, setErrorMessage] = useState<string>('');
 
@@ -554,6 +556,9 @@ export default function App() {
         candidate_phone: formData.phone,
         applied_position: formData.position,
         applied_branch: formData.branch,
+        candidate_gender: formData.gender,
+        candidate_address: formData.address,
+        candidate_birthday: formData.birthday,
         has_consented: formData.consent, 
         custom_answers: customQuestions.map(q => ({
           question: q.text,
@@ -579,7 +584,7 @@ export default function App() {
   };
 
   const resetForm = () => {
-    setFormData({ name: '', phone: '', position: '', branch: '', answers: {}, consent: false });
+    setFormData({ name: '', phone: '', position: '', branch: '', gender: '', address: '', birthday: '', answers: {}, consent: false });
     setStatus('idle');
     setSubmittedDocId('');
     submittedDocIdRef.current = '';
@@ -929,6 +934,19 @@ export default function App() {
                       />
                     </div>
 
+                    {/* 個資聲明設定 */}
+                    <div>
+                      <label className="block text-sm font-semibold text-zinc-700 mb-1">個資同意聲明文字</label>
+                      <p className="text-xs text-zinc-400 mb-2">顯示於面試表單底部的個資同意勾選欄</p>
+                      <textarea
+                        value={draftHeaderContent.consentText || ''}
+                        onChange={(e: any) => setDraftHeaderContent((prev: any) => ({...prev, consentText: e.target.value}))}
+                        rows={3}
+                        className="focus:ring-2 focus:ring-zinc-900 block w-full sm:text-sm border-transparent bg-zinc-100 rounded-2xl py-3.5 px-4 transition-all focus:bg-white resize-none text-zinc-900 font-medium placeholder:text-zinc-400"
+                        placeholder="我瞭解並同意貴公司為「人才招募」目的，蒐集、處理我的個人資料..."
+                      />
+                    </div>
+
                     {/* 應徵分店設定 */}
                     <div className="pt-6 border-t border-zinc-100">
                       <label className="block text-sm font-semibold text-zinc-700 mb-3">應徵分店選項</label>
@@ -1157,6 +1175,9 @@ export default function App() {
                               <div className="bg-white border-t border-zinc-100 px-5 pb-5 pt-4 space-y-4">
                                 <div className="flex flex-wrap gap-2">
                                   <span className="text-xs font-semibold bg-zinc-100 text-zinc-700 px-3 py-1.5 rounded-full">{candidate.candidate_phone}</span>
+                                  {candidate.candidate_gender && <span className="text-xs font-semibold bg-zinc-100 text-zinc-700 px-3 py-1.5 rounded-full">{candidate.candidate_gender === 'male' ? '男' : candidate.candidate_gender === 'female' ? '女' : '中性'}</span>}
+                                  {candidate.candidate_birthday && <span className="text-xs font-semibold bg-zinc-100 text-zinc-700 px-3 py-1.5 rounded-full">生日：{candidate.candidate_birthday}</span>}
+                                  {candidate.candidate_address && <span className="text-xs font-semibold bg-zinc-100 text-zinc-700 px-3 py-1.5 rounded-full">📍 {candidate.candidate_address}</span>}
                                   <span className="text-xs font-semibold bg-zinc-100 text-zinc-700 px-3 py-1.5 rounded-full">提交：{candidate.submitted_at ? new Date(candidate.submitted_at).toLocaleString() : '—'}</span>
                                 </div>
                                 {/* 評分 */}
@@ -1488,6 +1509,57 @@ export default function App() {
                         ))}
                       </select>
                     </div>
+
+                    {/* 性別 */}
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <User className="h-5 w-5 text-zinc-400" />
+                      </div>
+                      <select
+                        name="gender"
+                        required
+                        value={formData.gender}
+                        onChange={handleBasicInputChange}
+                        className={`${inputClassName} appearance-none`}
+                      >
+                        <option value="" disabled>請選擇性別...</option>
+                        <option value="male">男</option>
+                        <option value="female">女</option>
+                        <option value="neutral">中性</option>
+                      </select>
+                    </div>
+
+                    {/* 出生年月日 */}
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <Calendar className="h-5 w-5 text-zinc-400" />
+                      </div>
+                      <input
+                        type="date"
+                        name="birthday"
+                        required
+                        value={formData.birthday}
+                        onChange={handleBasicInputChange}
+                        className={inputClassName}
+                        placeholder="出生年月日"
+                      />
+                    </div>
+
+                    {/* 居住地址 */}
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <MapPin className="h-5 w-5 text-zinc-400" />
+                      </div>
+                      <input
+                        type="text"
+                        name="address"
+                        required
+                        value={formData.address}
+                        onChange={handleBasicInputChange}
+                        className={inputClassName}
+                        placeholder="居住地址 (例如：台北市信義區...)"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -1548,7 +1620,7 @@ export default function App() {
                         同意隱私權與個資聲明 <span className="text-red-500">*</span>
                       </label>
                       <p className="text-xs font-medium text-zinc-500 leading-relaxed">
-                        我瞭解並同意美味餐飲集團為「人才招募」目的，蒐集、處理我的個人資料，未經同意不外流。
+                        {headerContent.consentText || "我瞭解並同意貴公司為「人才招募」目的，蒐集、處理我的個人資料，未經同意不外流。"}
                       </p>
                     </div>
                   </div>
