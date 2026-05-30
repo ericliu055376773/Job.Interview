@@ -860,15 +860,21 @@ export default function App() {
             <div className="flex space-x-3 mb-6">
               <button 
                 onClick={() => setAdminMainTab('settings')}
-                className={`flex-1 py-4 font-bold text-lg rounded-[1.5rem] transition-all flex items-center justify-center ${adminMainTab === 'settings' ? 'bg-zinc-900 text-white shadow-md' : 'bg-white text-zinc-500 border border-zinc-200 hover:bg-zinc-50'}`}
+                className={`flex-1 py-4 font-bold text-base rounded-[1.5rem] transition-all flex items-center justify-center ${adminMainTab === 'settings' ? 'bg-zinc-900 text-white shadow-md' : 'bg-white text-zinc-500 border border-zinc-200 hover:bg-zinc-50'}`}
               >
                 <SettingsIcon className="w-5 h-5 mr-2" /> 面試單設定
               </button>
               <button 
                 onClick={() => setAdminMainTab('employees')}
-                className={`flex-1 py-4 font-bold text-lg rounded-[1.5rem] transition-all flex items-center justify-center ${adminMainTab === 'employees' ? 'bg-zinc-900 text-white shadow-md' : 'bg-white text-zinc-500 border border-zinc-200 hover:bg-zinc-50'}`}
+                className={`flex-1 py-4 font-bold text-base rounded-[1.5rem] transition-all flex items-center justify-center ${adminMainTab === 'employees' ? 'bg-zinc-900 text-white shadow-md' : 'bg-white text-zinc-500 border border-zinc-200 hover:bg-zinc-50'}`}
               >
                 <Users className="w-5 h-5 mr-2" /> 員工管理
+              </button>
+              <button 
+                onClick={() => setAdminMainTab('ratings')}
+                className={`flex-1 py-4 font-bold text-base rounded-[1.5rem] transition-all flex items-center justify-center ${adminMainTab === 'ratings' ? 'bg-zinc-900 text-white shadow-md' : 'bg-white text-zinc-500 border border-zinc-200 hover:bg-zinc-50'}`}
+              >
+                <ClipboardCheck className="w-5 h-5 mr-2" /> 評分總覽
               </button>
             </div>
 
@@ -1273,6 +1279,115 @@ export default function App() {
                     </div>
                   )}
                 </div>
+              </div>
+            )}
+
+            {/* ======================================================= */}
+            {/* 分頁 3: 評分總覽 (A/B/C/D 各一區塊)                       */}
+            {/* ======================================================= */}
+            {adminMainTab === 'ratings' && (
+              <div className="animate-in slide-in-from-bottom-2 fade-in pt-2 space-y-5">
+                {isLoadingCandidates ? (
+                  <div className="py-20 text-center text-zinc-400 font-medium bg-white rounded-3xl border border-zinc-100 flex flex-col items-center shadow-sm">
+                    <Loader2 className="animate-spin w-8 h-8 mb-4 text-zinc-400" />
+                    正在從 Firebase 載入資料...
+                  </div>
+                ) : candidatesList.filter(c => c.interview_grade).length === 0 ? (
+                  <div className="py-20 text-center bg-white rounded-3xl border border-dashed border-zinc-200 shadow-sm">
+                    <ClipboardCheck className="w-10 h-10 text-zinc-200 mx-auto mb-3" />
+                    <p className="text-zinc-400 font-medium">目前尚無任何評分紀錄</p>
+                  </div>
+                ) : (
+                  <>
+                    {/* 統計橫幅 */}
+                    <div className="grid grid-cols-4 gap-3">
+                      {GRADE_OPTIONS.map(g => {
+                        const count = candidatesList.filter(c => c.interview_grade === g.value).length;
+                        return (
+                          <div key={g.value} className={`p-4 rounded-2xl border text-center ${count > 0 ? g.lightColor : 'bg-zinc-50 border-zinc-100'}`}>
+                            <span className={`w-10 h-10 rounded-full ${count > 0 ? g.color : 'bg-zinc-200'} text-white font-extrabold text-lg flex items-center justify-center mx-auto mb-2 shadow-sm`}>
+                              {g.value}
+                            </span>
+                            <p className={`text-2xl font-extrabold ${count > 0 ? '' : 'text-zinc-300'}`}>{count}</p>
+                            <p className={`text-xs font-semibold mt-0.5 ${count > 0 ? 'opacity-70' : 'text-zinc-300'}`}>人</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* A/B/C/D 各區塊 */}
+                    {GRADE_OPTIONS.map(g => {
+                      const group = candidatesList.filter(c => c.interview_grade === g.value);
+                      if (group.length === 0) return null;
+                      return (
+                        <div key={g.value} className="bg-white rounded-[2rem] border border-zinc-100 shadow-sm overflow-hidden">
+                          <div className={`px-6 py-4 flex items-center ${g.lightColor} border-b border-current border-opacity-20`}>
+                            <span className={`w-10 h-10 rounded-full ${g.color} text-white font-extrabold text-lg flex items-center justify-center mr-3 shadow-sm`}>
+                              {g.value}
+                            </span>
+                            <div>
+                              <p className="font-extrabold text-base">{g.label} — {g.desc}</p>
+                              <p className="text-xs opacity-60 font-medium">共 {group.length} 人</p>
+                            </div>
+                          </div>
+                          <div className="divide-y divide-zinc-50">
+                            {group.map(candidate => {
+                              const isExpanded = expandedCardId === `r-${candidate.id}`;
+                              return (
+                                <div key={candidate.id}>
+                                  <button
+                                    type="button"
+                                    onClick={() => setExpandedCardId(isExpanded ? null : `r-${candidate.id}`)}
+                                    className="w-full px-6 py-4 flex items-center justify-between hover:bg-zinc-50 transition-colors text-left"
+                                  >
+                                    <div className="flex items-center space-x-3 min-w-0">
+                                      <div className="w-9 h-9 rounded-full bg-zinc-100 flex items-center justify-center flex-shrink-0">
+                                        <User className="w-4 h-4 text-zinc-500" />
+                                      </div>
+                                      <div className="min-w-0">
+                                        <p className="font-bold text-zinc-900 text-sm">{candidate.candidate_name}</p>
+                                        <p className="text-xs text-zinc-400 font-medium truncate">
+                                          {candidate.interviewer_branch || candidate.applied_branch} · 面試官：{candidate.interviewer_name || '未填'}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center space-x-2 flex-shrink-0 ml-3">
+                                      <span className="text-xs text-zinc-400 font-medium hidden sm:block">
+                                        {candidate.applied_position === 'waiter' ? '外場' : candidate.applied_position === 'kitchen' ? '內場' : candidate.applied_position === 'store_manager' ? '店長' : candidate.applied_position}
+                                      </span>
+                                      <ChevronRight className={`w-4 h-4 text-zinc-400 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} />
+                                    </div>
+                                  </button>
+                                  {isExpanded && (
+                                    <div className={`mx-4 mb-4 p-4 rounded-2xl border animate-in fade-in duration-200 ${g.lightColor}`}>
+                                      <div className="flex flex-wrap gap-2 mb-3">
+                                        <span className="text-xs font-semibold bg-white bg-opacity-60 px-3 py-1 rounded-full opacity-80">{candidate.candidate_phone}</span>
+                                        <span className="text-xs font-semibold bg-white bg-opacity-60 px-3 py-1 rounded-full opacity-80">{candidate.applied_branch} 應徵</span>
+                                        {candidate.rated_at && (
+                                          <span className="text-xs font-semibold bg-white bg-opacity-60 px-3 py-1 rounded-full opacity-80">
+                                            評分：{new Date(candidate.rated_at).toLocaleString()}
+                                          </span>
+                                        )}
+                                      </div>
+                                      {candidate.interview_note ? (
+                                        <div>
+                                          <p className="text-xs font-bold opacity-60 mb-1">面試官評語：</p>
+                                          <p className="text-sm font-medium leading-relaxed whitespace-pre-wrap opacity-90">{candidate.interview_note}</p>
+                                        </div>
+                                      ) : (
+                                        <p className="text-sm opacity-50 font-medium">（無評語）</p>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </>
+                )}
               </div>
             )}
 
