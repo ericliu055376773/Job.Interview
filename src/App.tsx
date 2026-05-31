@@ -412,7 +412,9 @@ export default function App() {
     { id: 'q2', text: '請簡短自我介紹，並分享您為什麼想加入美味餐飲集團？', type: 'textarea', required: true },
     { id: 'q3', text: '一週內可配合排班的時段為何？(例如: 平日晚班、假日全天)', type: 'text', required: true }
   ]);
-  const [draftQuestions, setDraftQuestions] = useState<any[]>([]); 
+  const [draftQuestions, setDraftQuestions] = useState<any[]>([]);
+  const dragItemIndex = useRef<number | null>(null);
+  const dragOverItemIndex = useRef<number | null>(null);
   
   const [candidatesList, setCandidatesList] = useState<any[]>([]);
   const [isLoadingCandidates, setIsLoadingCandidates] = useState<boolean>(false);
@@ -658,6 +660,25 @@ export default function App() {
     setDraftQuestions(draftQuestions.filter(q => q.id !== id));
   };
 
+  const handleDragStart = (index: number) => {
+    dragItemIndex.current = index;
+  };
+
+  const handleDragEnter = (index: number) => {
+    dragOverItemIndex.current = index;
+  };
+
+  const handleDragEnd = () => {
+    if (dragItemIndex.current === null || dragOverItemIndex.current === null) return;
+    if (dragItemIndex.current === dragOverItemIndex.current) return;
+    const updated = [...draftQuestions];
+    const dragged = updated.splice(dragItemIndex.current, 1)[0];
+    updated.splice(dragOverItemIndex.current, 0, dragged);
+    setDraftQuestions(updated);
+    dragItemIndex.current = null;
+    dragOverItemIndex.current = null;
+  };
+
   const handleAddBranch = () => {
     const trimmed = newBranchInput.trim();
     if (trimmed && !draftBranches.includes(trimmed)) {
@@ -735,7 +756,7 @@ export default function App() {
   const inputClassName = "focus:ring-2 focus:ring-zinc-900 focus:border-zinc-900 block w-full pl-11 sm:text-sm border-transparent bg-zinc-100 rounded-2xl py-3.5 transition-all hover:bg-zinc-200 focus:bg-white text-zinc-900 font-medium placeholder:text-zinc-400";
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] font-sans pb-12 relative">
+    <div className="min-h-screen bg-[#F8F9FA] font-sans pb-12 relative select-text">
       
       {tempLogoUrl && (
         <ImageCropper 
@@ -1043,13 +1064,31 @@ export default function App() {
                     </button>
                   </div>
 
-                  <h4 className="text-sm font-bold text-zinc-700 mb-4">草稿列表 ({draftQuestions.length})</h4>
+                  <h4 className="text-sm font-bold text-zinc-700 mb-4">草稿列表 ({draftQuestions.length})
+                    {draftQuestions.length > 1 && <span className="ml-2 text-xs text-zinc-400 font-normal">拖曳左側 ⠿ 可調整順序</span>}
+                  </h4>
                   {draftQuestions.length === 0 ? (
                     <p className="text-zinc-400 text-center py-8 font-medium bg-zinc-50 rounded-3xl">目前沒有任何自訂題目</p>
                   ) : (
-                    <ul className="space-y-4">
+                    <ul className="space-y-3">
                       {draftQuestions.map((q, index) => (
-                        <li key={q.id} className="flex items-start justify-between p-5 bg-zinc-50 rounded-3xl transition-colors hover:bg-zinc-100">
+                        <li
+                          key={q.id}
+                          draggable
+                          onDragStart={() => handleDragStart(index)}
+                          onDragEnter={() => handleDragEnter(index)}
+                          onDragEnd={handleDragEnd}
+                          onDragOver={(e: any) => e.preventDefault()}
+                          className="flex items-start justify-between p-5 bg-zinc-50 rounded-3xl transition-all hover:bg-zinc-100 cursor-default active:opacity-60 active:scale-[0.99]"
+                        >
+                          {/* 拖曳把手 */}
+                          <div
+                            className="flex-shrink-0 w-8 flex flex-col items-center justify-center gap-1 cursor-grab active:cursor-grabbing pt-1 mr-3 text-zinc-300 hover:text-zinc-500 transition-colors select-none"
+                            title="拖曳排序"
+                          >
+                            <span className="text-lg leading-none">⠿</span>
+                          </div>
+
                           <div className="flex-1 pr-4">
                             <div className="flex items-center mb-2">
                               <span className="bg-white shadow-sm text-zinc-900 text-xs px-3 py-1 rounded-full mr-2 font-bold">Q{index + 1}</span>
