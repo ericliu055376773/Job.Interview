@@ -1686,3 +1686,145 @@ export default function App() {
                         <option value="" disabled>請選擇應徵分店...</option>
                         {customBranches.length === 0 && <option value="none" disabled>目前無可用分店</option>}
                         {customBranches.map(branch => (
+                          <option key={branch} value={branch}>{branch}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* 性別 */}
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <User className="h-5 w-5 text-zinc-400" />
+                      </div>
+                      <select
+                        name="gender"
+                        required
+                        value={formData.gender}
+                        onChange={handleBasicInputChange}
+                        className={`${inputClassName} appearance-none`}
+                      >
+                        <option value="" disabled>請選擇性別...</option>
+                        <option value="male">男</option>
+                        <option value="female">女</option>
+                        <option value="neutral">中性</option>
+                      </select>
+                    </div>
+
+                    {/* 出生年月日 */}
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <Calendar className="h-5 w-5 text-zinc-400" />
+                      </div>
+                      <input
+                        type="date"
+                        name="birthday"
+                        required
+                        value={formData.birthday}
+                        onChange={handleBasicInputChange}
+                        className={inputClassName}
+                        placeholder="出生年月日"
+                      />
+                    </div>
+
+                    {/* 居住地址 */}
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <MapPin className="h-5 w-5 text-zinc-400" />
+                      </div>
+                      <input
+                        type="text"
+                        name="address"
+                        required
+                        value={formData.address}
+                        onChange={handleBasicInputChange}
+                        className={inputClassName}
+                        placeholder="居住地址 (例如：台北市信義區...)"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* --- 區塊 2: 專業問答題 --- */}
+                {customQuestions.length > 0 && (
+                  <div className="pt-2 border-t border-zinc-100">
+                    <h3 className="text-lg font-bold text-zinc-900 mb-6 mt-8 flex items-center">
+                      <span className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center mr-3 text-sm">2</span>
+                      面試問答
+                    </h3>
+                    <div className="space-y-8">
+                      {customQuestions.map((q, index) => (
+                        <div key={q.id}>
+                          <label className="block text-sm font-bold text-zinc-900 mb-3 leading-relaxed">
+                            {q.text} {q.required && <span className="text-red-500 ml-1">*</span>}
+                          </label>
+                          {q.type === 'textarea' ? (
+                            <textarea
+                              required={q.required}
+                              rows={4}
+                              value={formData.answers[q.id] || ''}
+                              onChange={(e: any) => handleAnswerChange(q.id, e.target.value)}
+                              className="focus:ring-2 focus:ring-zinc-900 block w-full sm:text-sm border-transparent bg-zinc-100 rounded-3xl py-4 px-5 transition-all focus:bg-white resize-none text-zinc-900 font-medium placeholder:text-zinc-400"
+                              placeholder="請在此輸入您的回答..."
+                            />
+                          ) : (
+                            <input
+                              type="text"
+                              required={q.required}
+                              value={formData.answers[q.id] || ''}
+                              onChange={(e: any) => handleAnswerChange(q.id, e.target.value)}
+                              className="focus:ring-2 focus:ring-zinc-900 block w-full sm:text-sm border-transparent bg-zinc-100 rounded-2xl py-3.5 px-5 transition-all focus:bg-white"
+                              placeholder="請輸入簡短回答..."
+                            />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* --- 區塊 3: 個資同意書 --- */}
+                <div className="bg-zinc-50 p-6 rounded-3xl mt-8">
+                  <div className="flex items-start">
+                    <div className="flex items-center h-6">
+                      <input
+                        id="consent"
+                        name="consent"
+                        type="checkbox"
+                        required
+                        checked={formData.consent}
+                        onChange={handleBasicInputChange}
+                        className="h-5 w-5 text-zinc-900 border-zinc-300 rounded focus:ring-zinc-900 cursor-pointer bg-white"
+                      />
+                    </div>
+                    <div className="ml-3">
+                      <label htmlFor="consent" className="text-sm font-bold text-zinc-900 cursor-pointer block mb-1">
+                        同意隱私權與個資聲明 <span className="text-red-500">*</span>
+                      </label>
+                      <p className="text-xs font-medium text-zinc-500 leading-relaxed">
+                        {headerContent.consentText || "我瞭解並同意貴公司為「人才招募」目的，蒐集、處理我的個人資料，未經同意不外流。"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ========================================================= */}
+                {/* 完美復刻的專屬 Continue 膠囊按鈕 */}
+                {/* ========================================================= */}
+                <div className="pt-4">
+                  <SwipeToSubmit
+                    disabled={status === 'submitting' || !formData.consent}
+                    isLoading={status === 'submitting'}
+                    onSubmitTrigger={() => document.getElementById('hidden-submit-btn')?.click()}
+                  />
+                  {/* 隱藏的實際送出按鈕，用來觸發 HTML 原生必填驗證與 onSubmit */}
+                  <button type="submit" id="hidden-submit-btn" className="hidden">Submit</button>
+                </div>
+
+              </form>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
