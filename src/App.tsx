@@ -404,6 +404,9 @@ export default function App() {
   const [draftHeaderContent, setDraftHeaderContent] = useState<any>(defaultHeader);
 
   const [customBranches, setCustomBranches] = useState<string[]>(['虎尾店', '斗六店']);
+  const [customPositions, setCustomPositions] = useState<string[]>(['外場服務人員 (正職/兼職)', '內場廚房人員 (正職/兼職)', '店長 / 儲備幹部']);
+  const [draftPositions, setDraftPositions] = useState<string[]>(['外場服務人員 (正職/兼職)', '內場廚房人員 (正職/兼職)', '店長 / 儲備幹部']);
+  const [newPositionInput, setNewPositionInput] = useState<string>('');
   const [draftBranches, setDraftBranches] = useState<string[]>([]);
   const [newBranchInput, setNewBranchInput] = useState<string>('');
 
@@ -415,6 +418,9 @@ export default function App() {
   const [draftQuestions, setDraftQuestions] = useState<any[]>([]);
   const dragItemIndex = useRef<number | null>(null);
   const dragOverItemIndex = useRef<number | null>(null);
+  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
+  const [editingQuestionText, setEditingQuestionText] = useState<string>('');
+  const [editingQuestionType, setEditingQuestionType] = useState<string>('text');
   
   const [candidatesList, setCandidatesList] = useState<any[]>([]);
   const [isLoadingCandidates, setIsLoadingCandidates] = useState<boolean>(false);
@@ -452,6 +458,10 @@ export default function App() {
             setCustomBranches(data.customBranches);
             setDraftBranches(data.customBranches);
           }
+          if (data.customPositions) {
+            setCustomPositions(data.customPositions);
+            setDraftPositions(data.customPositions);
+          }
         }
       } catch (error: any) {
         console.warn("無法從 Firebase 載入設定，將使用預設值。原因:", error.message);
@@ -468,6 +478,7 @@ export default function App() {
       setCurrentView('admin');
       setDraftQuestions([...customQuestions]); 
       setDraftBranches([...customBranches]);
+      setDraftPositions([...customPositions]);
       setDraftHeaderContent({ ...headerContent });
       setShowLoginModal(false);
       setPasswordInput('');
@@ -498,6 +509,7 @@ export default function App() {
     const isQuestionsDirty = JSON.stringify(draftQuestions) !== JSON.stringify(customQuestions);
     const isHeaderDirty = JSON.stringify(draftHeaderContent) !== JSON.stringify(headerContent);
     const isBranchesDirty = JSON.stringify(draftBranches) !== JSON.stringify(customBranches);
+    const isPositionsDirty = JSON.stringify(draftPositions) !== JSON.stringify(customPositions);
     
     if (isQuestionsDirty || isHeaderDirty || isBranchesDirty) {
       setShowUnsavedModal(true);
@@ -690,9 +702,35 @@ export default function App() {
     setDraftBranches(draftBranches.filter(b => b !== branch));
   };
 
+  const handleEditQuestion = (q: any) => {
+    setEditingQuestionId(q.id);
+    setEditingQuestionText(q.text);
+    setEditingQuestionType(q.type);
+  };
+
+  const handleSaveQuestionEdit = (id: string) => {
+    if (!editingQuestionText.trim()) return;
+    setDraftQuestions(draftQuestions.map(q =>
+      q.id === id ? { ...q, text: editingQuestionText.trim(), type: editingQuestionType } : q
+    ));
+    setEditingQuestionId(null);
+  };
+
+  const handleAddPosition = () => {
+    const trimmed = newPositionInput.trim();
+    if (!trimmed || draftPositions.includes(trimmed)) return;
+    setDraftPositions([...draftPositions, trimmed]);
+    setNewPositionInput('');
+  };
+
+  const handleDeletePosition = (pos: string) => {
+    setDraftPositions(draftPositions.filter(p => p !== pos));
+  };
+
   const handleSaveSettings = async () => {
     setCustomQuestions([...draftQuestions]);
     setCustomBranches([...draftBranches]);
+    setCustomPositions([...draftPositions]);
     setHeaderContent({ ...draftHeaderContent });
     
     const draftIds = draftQuestions.map(q => q.id);
@@ -713,6 +751,7 @@ export default function App() {
         headerContent: draftHeaderContent,
         customQuestions: draftQuestions,
         customBranches: draftBranches,
+        customPositions: draftPositions,
         updated_at: new Date().toISOString()
       });
       setShowSaveToast(true);
@@ -1007,6 +1046,46 @@ export default function App() {
                         </div>
                       )}
                     </div>
+
+                    {/* 應徵職位設定 */}
+                    <div className="pt-6 border-t border-zinc-100">
+                      <label className="block text-sm font-semibold text-zinc-700 mb-1">應徵職位選項</label>
+                      <p className="text-xs text-zinc-400 mb-3">前台「請選擇欲應徵職缺」的選項清單</p>
+                      <div className="flex space-x-3 mb-4">
+                        <input
+                          type="text"
+                          value={newPositionInput}
+                          onChange={(e: any) => setNewPositionInput(e.target.value)}
+                          placeholder="輸入職位名稱 (例如：外場服務人員)"
+                          className="focus:ring-2 focus:ring-zinc-900 block w-full sm:text-sm border-transparent bg-zinc-100 rounded-2xl py-3 px-4 transition-all focus:bg-white text-zinc-900 font-medium"
+                          onKeyDown={(e: any) => { if (e.key === 'Enter') { e.preventDefault(); handleAddPosition(); } }}
+                        />
+                        <button
+                          onClick={handleAddPosition}
+                          disabled={!newPositionInput.trim()}
+                          className="px-6 py-3 bg-zinc-900 text-white rounded-2xl font-bold hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all whitespace-nowrap"
+                        >
+                          新增職位
+                        </button>
+                      </div>
+                      {draftPositions.length === 0 ? (
+                        <p className="text-sm text-zinc-400 font-medium bg-zinc-50 py-4 text-center rounded-2xl">目前尚無任何職位選項</p>
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          {draftPositions.map(pos => (
+                            <div key={pos} className="flex items-center bg-zinc-100 border border-zinc-200 px-4 py-2 rounded-full">
+                              <span className="text-[13px] font-bold text-zinc-800 mr-2">{pos}</span>
+                              <button
+                                onClick={() => handleDeletePosition(pos)}
+                                className="text-zinc-400 hover:text-red-500 transition-colors"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -1071,43 +1150,104 @@ export default function App() {
                     <p className="text-zinc-400 text-center py-8 font-medium bg-zinc-50 rounded-3xl">目前沒有任何自訂題目</p>
                   ) : (
                     <ul className="space-y-3">
-                      {draftQuestions.map((q, index) => (
+                      {draftQuestions.map((q, index) => {
+                        const isEditing = editingQuestionId === q.id;
+                        return (
                         <li
                           key={q.id}
-                          draggable
-                          onDragStart={() => handleDragStart(index)}
-                          onDragEnter={() => handleDragEnter(index)}
+                          draggable={!isEditing}
+                          onDragStart={() => !isEditing && handleDragStart(index)}
+                          onDragEnter={() => !isEditing && handleDragEnter(index)}
                           onDragEnd={handleDragEnd}
                           onDragOver={(e: any) => e.preventDefault()}
-                          className="flex items-start justify-between p-5 bg-zinc-50 rounded-3xl transition-all hover:bg-zinc-100 cursor-default active:opacity-60 active:scale-[0.99]"
+                          className={`flex items-start justify-between p-5 rounded-3xl transition-all ${isEditing ? 'bg-white border-2 border-zinc-900 shadow-md' : 'bg-zinc-50 hover:bg-zinc-100 cursor-default active:opacity-60 active:scale-[0.99]'}`}
                         >
                           {/* 拖曳把手 */}
                           <div
-                            className="flex-shrink-0 w-8 flex flex-col items-center justify-center gap-1 cursor-grab active:cursor-grabbing pt-1 mr-3 text-zinc-300 hover:text-zinc-500 transition-colors select-none"
-                            title="拖曳排序"
+                            className={`flex-shrink-0 w-8 flex flex-col items-center justify-center gap-1 pt-1 mr-3 transition-colors select-none ${isEditing ? 'text-zinc-200 cursor-not-allowed' : 'cursor-grab active:cursor-grabbing text-zinc-300 hover:text-zinc-500'}`}
+                            title={isEditing ? '' : '拖曳排序'}
                           >
                             <span className="text-lg leading-none">⠿</span>
                           </div>
 
-                          <div className="flex-1 pr-4">
-                            <div className="flex items-center mb-2">
-                              <span className="bg-white shadow-sm text-zinc-900 text-xs px-3 py-1 rounded-full mr-2 font-bold">Q{index + 1}</span>
-                              <span className="text-xs font-semibold text-zinc-500 bg-zinc-200/50 px-2 py-1 rounded-md">
-                                {q.type === 'text' ? '單行填寫' : '多行問答'}
-                              </span>
-                              {q.required && <span className="ml-2 text-xs text-red-500 font-bold">• 必填</span>}
+                          <div className="flex-1 pr-3">
+                            {/* 標題列 */}
+                            <div className="flex items-center mb-2 flex-wrap gap-2">
+                              <span className="bg-white shadow-sm text-zinc-900 text-xs px-3 py-1 rounded-full font-bold border border-zinc-100">Q{index + 1}</span>
+
+                              {isEditing ? (
+                                /* 編輯模式：類型切換 */
+                                <div className="flex rounded-xl overflow-hidden border border-zinc-200 text-xs font-bold">
+                                  <button type="button"
+                                    onClick={() => setEditingQuestionType('text')}
+                                    className={`px-3 py-1.5 transition-colors ${editingQuestionType === 'text' ? 'bg-zinc-900 text-white' : 'bg-white text-zinc-500 hover:bg-zinc-50'}`}
+                                  >單行填寫</button>
+                                  <button type="button"
+                                    onClick={() => setEditingQuestionType('textarea')}
+                                    className={`px-3 py-1.5 transition-colors ${editingQuestionType === 'textarea' ? 'bg-zinc-900 text-white' : 'bg-white text-zinc-500 hover:bg-zinc-50'}`}
+                                  >多行問答</button>
+                                </div>
+                              ) : (
+                                <span className="text-xs font-semibold text-zinc-500 bg-zinc-200/50 px-2 py-1 rounded-md">
+                                  {q.type === 'text' ? '單行填寫' : '多行問答'}
+                                </span>
+                              )}
+                              {q.required && <span className="text-xs text-red-500 font-bold">• 必填</span>}
                             </div>
-                            <p className="text-sm font-semibold text-zinc-800 leading-relaxed">{q.text}</p>
+
+                            {/* 內容區 */}
+                            {isEditing ? (
+                              <div className="space-y-3">
+                                <textarea
+                                  autoFocus
+                                  value={editingQuestionText}
+                                  onChange={(e: any) => setEditingQuestionText(e.target.value)}
+                                  rows={3}
+                                  onKeyDown={(e: any) => { if (e.key === 'Enter' && e.metaKey) handleSaveQuestionEdit(q.id); if (e.key === 'Escape') setEditingQuestionId(null); }}
+                                  className="w-full bg-zinc-50 rounded-2xl py-3 px-4 text-sm font-semibold text-zinc-900 border border-zinc-200 focus:ring-2 focus:ring-zinc-900 focus:border-transparent resize-none outline-none"
+                                />
+                                <div className="flex gap-2">
+                                  <button type="button"
+                                    onClick={() => handleSaveQuestionEdit(q.id)}
+                                    className="flex-1 py-2 bg-zinc-900 text-white text-xs font-bold rounded-xl hover:bg-zinc-800 active:scale-95 transition-all"
+                                  >✓ 儲存變更</button>
+                                  <button type="button"
+                                    onClick={() => setEditingQuestionId(null)}
+                                    className="px-4 py-2 bg-zinc-100 text-zinc-600 text-xs font-bold rounded-xl hover:bg-zinc-200 active:scale-95 transition-all"
+                                  >取消</button>
+                                </div>
+                              </div>
+                            ) : (
+                              <p
+                                className="text-sm font-semibold text-zinc-800 leading-relaxed cursor-pointer hover:text-zinc-500 transition-colors"
+                                onClick={() => handleEditQuestion(q)}
+                                title="點擊編輯"
+                              >{q.text}</p>
+                            )}
                           </div>
-                          <button
-                            onClick={() => handleDeleteQuestion(q.id)}
-                            className="w-10 h-10 flex items-center justify-center rounded-full bg-white text-zinc-400 hover:text-red-500 hover:bg-red-50 shadow-sm transition-all flex-shrink-0"
-                            title="刪除"
-                          >
-                            <Trash2 className="w-5 h-5" />
-                          </button>
+
+                          {/* 右側按鈕 */}
+                          {!isEditing && (
+                            <div className="flex flex-col gap-2 flex-shrink-0">
+                              <button
+                                onClick={() => handleEditQuestion(q)}
+                                className="w-10 h-10 flex items-center justify-center rounded-full bg-white text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 shadow-sm transition-all"
+                                title="編輯"
+                              >
+                                <SaveIcon className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteQuestion(q.id)}
+                                className="w-10 h-10 flex items-center justify-center rounded-full bg-white text-zinc-400 hover:text-red-500 hover:bg-red-50 shadow-sm transition-all"
+                                title="刪除"
+                              >
+                                <Trash2 className="w-5 h-5" />
+                              </button>
+                            </div>
+                          )}
                         </li>
-                      ))}
+                        );
+                      })}
                     </ul>
                   )}
                 </div>
@@ -1200,7 +1340,7 @@ export default function App() {
                                 }
                                 <div className="min-w-0">
                                   <p className="font-bold text-zinc-900 text-sm truncate">{candidate.candidate_name}</p>
-                                  <p className="text-xs text-zinc-500 truncate">{candidate.applied_branch} · {candidate.applied_position === 'waiter' ? '外場' : candidate.applied_position === 'kitchen' ? '內場' : '店長'}</p>
+                                  <p className="text-xs text-zinc-500 truncate">{candidate.applied_branch} · {candidate.applied_position}</p>
                                 </div>
                               </div>
                               <div className="flex items-center gap-2 ml-3 flex-shrink-0">
@@ -1412,6 +1552,7 @@ export default function App() {
                     setCurrentView('admin');
                     setDraftQuestions([...customQuestions]);
                     setDraftBranches([...customBranches]);
+      setDraftPositions([...customPositions]);
                     setDraftHeaderContent({ ...headerContent });
                   } else {
                     setShowLoginModal(true);
@@ -1523,9 +1664,10 @@ export default function App() {
                         className={`${inputClassName} appearance-none`}
                       >
                         <option value="" disabled>請選擇欲應徵職缺...</option>
-                        <option value="waiter">外場服務人員 (正職/兼職)</option>
-                        <option value="kitchen">內場廚房人員 (正職/兼職)</option>
-                        <option value="store_manager">店長 / 儲備幹部</option>
+                        {customPositions.length === 0 && <option value="none" disabled>目前無可用職位</option>}
+                        {customPositions.map(pos => (
+                          <option key={pos} value={pos}>{pos}</option>
+                        ))}
                       </select>
                     </div>
 
@@ -1544,145 +1686,3 @@ export default function App() {
                         <option value="" disabled>請選擇應徵分店...</option>
                         {customBranches.length === 0 && <option value="none" disabled>目前無可用分店</option>}
                         {customBranches.map(branch => (
-                          <option key={branch} value={branch}>{branch}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* 性別 */}
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <User className="h-5 w-5 text-zinc-400" />
-                      </div>
-                      <select
-                        name="gender"
-                        required
-                        value={formData.gender}
-                        onChange={handleBasicInputChange}
-                        className={`${inputClassName} appearance-none`}
-                      >
-                        <option value="" disabled>請選擇性別...</option>
-                        <option value="male">男</option>
-                        <option value="female">女</option>
-                        <option value="neutral">中性</option>
-                      </select>
-                    </div>
-
-                    {/* 出生年月日 */}
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <Calendar className="h-5 w-5 text-zinc-400" />
-                      </div>
-                      <input
-                        type="date"
-                        name="birthday"
-                        required
-                        value={formData.birthday}
-                        onChange={handleBasicInputChange}
-                        className={inputClassName}
-                        placeholder="出生年月日"
-                      />
-                    </div>
-
-                    {/* 居住地址 */}
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <MapPin className="h-5 w-5 text-zinc-400" />
-                      </div>
-                      <input
-                        type="text"
-                        name="address"
-                        required
-                        value={formData.address}
-                        onChange={handleBasicInputChange}
-                        className={inputClassName}
-                        placeholder="居住地址 (例如：台北市信義區...)"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* --- 區塊 2: 專業問答題 --- */}
-                {customQuestions.length > 0 && (
-                  <div className="pt-2 border-t border-zinc-100">
-                    <h3 className="text-lg font-bold text-zinc-900 mb-6 mt-8 flex items-center">
-                      <span className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center mr-3 text-sm">2</span>
-                      面試問答
-                    </h3>
-                    <div className="space-y-8">
-                      {customQuestions.map((q, index) => (
-                        <div key={q.id}>
-                          <label className="block text-sm font-bold text-zinc-900 mb-3 leading-relaxed">
-                            {q.text} {q.required && <span className="text-red-500 ml-1">*</span>}
-                          </label>
-                          {q.type === 'textarea' ? (
-                            <textarea
-                              required={q.required}
-                              rows={4}
-                              value={formData.answers[q.id] || ''}
-                              onChange={(e: any) => handleAnswerChange(q.id, e.target.value)}
-                              className="focus:ring-2 focus:ring-zinc-900 block w-full sm:text-sm border-transparent bg-zinc-100 rounded-3xl py-4 px-5 transition-all focus:bg-white resize-none text-zinc-900 font-medium placeholder:text-zinc-400"
-                              placeholder="請在此輸入您的回答..."
-                            />
-                          ) : (
-                            <input
-                              type="text"
-                              required={q.required}
-                              value={formData.answers[q.id] || ''}
-                              onChange={(e: any) => handleAnswerChange(q.id, e.target.value)}
-                              className="focus:ring-2 focus:ring-zinc-900 block w-full sm:text-sm border-transparent bg-zinc-100 rounded-2xl py-3.5 px-5 transition-all focus:bg-white"
-                              placeholder="請輸入簡短回答..."
-                            />
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* --- 區塊 3: 個資同意書 --- */}
-                <div className="bg-zinc-50 p-6 rounded-3xl mt-8">
-                  <div className="flex items-start">
-                    <div className="flex items-center h-6">
-                      <input
-                        id="consent"
-                        name="consent"
-                        type="checkbox"
-                        required
-                        checked={formData.consent}
-                        onChange={handleBasicInputChange}
-                        className="h-5 w-5 text-zinc-900 border-zinc-300 rounded focus:ring-zinc-900 cursor-pointer bg-white"
-                      />
-                    </div>
-                    <div className="ml-3">
-                      <label htmlFor="consent" className="text-sm font-bold text-zinc-900 cursor-pointer block mb-1">
-                        同意隱私權與個資聲明 <span className="text-red-500">*</span>
-                      </label>
-                      <p className="text-xs font-medium text-zinc-500 leading-relaxed">
-                        {headerContent.consentText || "我瞭解並同意貴公司為「人才招募」目的，蒐集、處理我的個人資料，未經同意不外流。"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* ========================================================= */}
-                {/* 完美復刻的專屬 Continue 膠囊按鈕 */}
-                {/* ========================================================= */}
-                <div className="pt-4">
-                  <SwipeToSubmit
-                    disabled={status === 'submitting' || !formData.consent}
-                    isLoading={status === 'submitting'}
-                    onSubmitTrigger={() => document.getElementById('hidden-submit-btn')?.click()}
-                  />
-                  {/* 隱藏的實際送出按鈕，用來觸發 HTML 原生必填驗證與 onSubmit */}
-                  <button type="submit" id="hidden-submit-btn" className="hidden">Submit</button>
-                </div>
-
-              </form>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
