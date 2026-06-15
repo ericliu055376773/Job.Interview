@@ -1843,6 +1843,25 @@ export default function App() {
                             )}
                           </div>
                         </div>
+
+                        {/* 面試問答 */}
+                        {customQuestions.length > 0 && (
+                          <div className="bg-zinc-50 rounded-2xl p-4 mb-4">
+                            <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-3">面試問答</p>
+                            <div className="space-y-4">
+                              {customQuestions.map((q, idx) => (
+                                <div key={q.id}>
+                                  <p className="text-xs font-bold text-zinc-500 mb-1.5">Q{idx + 1}. {q.text}</p>
+                                  <div className="bg-white rounded-xl px-4 py-3 border border-zinc-100">
+                                    <p className="text-sm font-semibold text-zinc-800 leading-relaxed whitespace-pre-wrap">
+                                      {formData.answers[q.id] || <span className="text-zinc-300 font-normal">未填寫</span>}
+                                    </p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                         {/* 紅色滑軌 */}
                         <SwipeToReview onTrigger={() => setReviewStatus('done')} />
                         <p className="text-center text-xs text-zinc-400 font-medium mt-2 mb-3">← 面試官請向右滑動以開始評分</p>
