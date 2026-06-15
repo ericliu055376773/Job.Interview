@@ -1780,9 +1780,9 @@ export default function App() {
 
                   {/* 通知卡片 — 固定在螢幕中央 */}
                   <div className="fixed inset-0 z-50 flex items-center justify-center px-6 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-300">
+                    <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-300" style={{maxHeight: '90vh', display: 'flex', flexDirection: 'column'}}>
                       {/* 紅色頂部條 */}
-                      <div className="bg-red-500 px-6 py-5 flex items-center gap-3">
+                      <div className="bg-red-500 px-6 py-5 flex items-center gap-3 flex-shrink-0">
                         <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
                           <AlertCircle className="w-6 h-6 text-white" />
                         </div>
@@ -1790,20 +1790,71 @@ export default function App() {
                           {headerContent.reviewNoticeTitle || '面試者已完成填寫'}
                         </p>
                       </div>
-                      {/* 內容 */}
-                      <div className="px-6 py-5">
-                        <p className="text-sm text-zinc-600 leading-relaxed font-medium mb-5">
+                      {/* 可捲動內容區 */}
+                      <div className="px-6 py-5 overflow-y-auto flex-1">
+                        <p className="text-sm text-zinc-600 leading-relaxed font-medium mb-4">
                           {headerContent.reviewNoticeText || '請面試官確認資料後，向右滑動下方紅色滑軌開始進行評分。'}
                         </p>
-                        {/* 應徵者摘要 */}
-                        <div className="bg-zinc-50 rounded-2xl p-4 mb-5 flex flex-wrap gap-2">
-                          <span className="text-xs font-bold bg-white border border-zinc-200 text-zinc-700 px-3 py-1.5 rounded-full">{formData.name}</span>
-                          <span className="text-xs font-bold bg-white border border-zinc-200 text-zinc-700 px-3 py-1.5 rounded-full">{formData.position}</span>
-                          <span className="text-xs font-bold bg-white border border-zinc-200 text-zinc-700 px-3 py-1.5 rounded-full">{formData.branch}</span>
+                        {/* 應徵者完整資訊 */}
+                        <div className="bg-zinc-50 rounded-2xl p-4 mb-4">
+                          <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-3">應徵者資訊</p>
+                          <div className="space-y-2">
+                            {formData.name && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-zinc-400 w-10 flex-shrink-0">姓名</span>
+                                <span className="text-sm font-bold text-zinc-800">{formData.name}</span>
+                              </div>
+                            )}
+                            {formData.phone && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-zinc-400 w-10 flex-shrink-0">電話</span>
+                                <span className="text-sm font-semibold text-zinc-700">{formData.phone}</span>
+                              </div>
+                            )}
+                            {formData.position && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-zinc-400 w-10 flex-shrink-0">職缺</span>
+                                <span className="text-sm font-semibold text-zinc-700">{formData.position}</span>
+                              </div>
+                            )}
+                            {formData.branch && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-zinc-400 w-10 flex-shrink-0">分店</span>
+                                <span className="text-sm font-semibold text-zinc-700">{formData.branch}</span>
+                              </div>
+                            )}
+                            {formData.gender && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-zinc-400 w-10 flex-shrink-0">性別</span>
+                                <span className="text-sm font-semibold text-zinc-700">{formData.gender === 'male' ? '男' : formData.gender === 'female' ? '女' : '中性'}</span>
+                              </div>
+                            )}
+                            {formData.birthday && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-zinc-400 w-10 flex-shrink-0">生日</span>
+                                <span className="text-sm font-semibold text-zinc-700">{formData.birthday}</span>
+                              </div>
+                            )}
+                            {formData.address && (
+                              <div className="flex items-start gap-2">
+                                <span className="text-xs font-bold text-zinc-400 w-10 flex-shrink-0 pt-0.5">地址</span>
+                                <span className="text-sm font-semibold text-zinc-700 leading-relaxed">{formData.address}</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                         {/* 紅色滑軌 */}
                         <SwipeToReview onTrigger={() => setReviewStatus('done')} />
-                        <p className="text-center text-xs text-zinc-400 font-medium mt-2">← 面試官請向右滑動以開始評分</p>
+                        <p className="text-center text-xs text-zinc-400 font-medium mt-2 mb-3">← 面試官請向右滑動以開始評分</p>
+                        {/* 返回修改按鈕 */}
+                        <button
+                          type="button"
+                          onClick={() => { setStatus('idle'); setSubmittedDocId(''); submittedDocIdRef.current = ''; setReviewStatus('idle'); }}
+                          className="w-full py-3 rounded-2xl border-2 border-zinc-200 text-zinc-500 text-sm font-bold hover:bg-zinc-50 hover:border-zinc-300 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                        >
+                          <ArrowRight className="w-4 h-4 rotate-180" />
+                          面試者返回修改資料
+                        </button>
                       </div>
                     </div>
                   </div>
