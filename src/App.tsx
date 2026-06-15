@@ -480,7 +480,9 @@ export default function App() {
     title: "Thrilled to Join\nOur Team!",
     description: "歡迎來到美味餐飲集團！請填寫以下面試資料，為您的招募旅程踏出第一步。",
     logoUrl: "",
-    consentText: "我瞭解並同意貴公司為「人才招募」目的，蒐集、處理我的個人資料，未經同意不外流。"
+    consentText: "我瞭解並同意貴公司為「人才招募」目的，蒐集、處理我的個人資料，未經同意不外流。",
+    reviewNoticeTitle: "面試者已完成填寫",
+    reviewNoticeText: "請面試官確認資料後，向右滑動下方紅色滑軌開始進行評分。"
   };
   const [headerContent, setHeaderContent] = useState<any>(defaultHeader);
   const [draftHeaderContent, setDraftHeaderContent] = useState<any>(defaultHeader);
@@ -1141,6 +1143,43 @@ export default function App() {
                       />
                     </div>
 
+                    {/* 面試官通知卡片設定 */}
+                    <div className="pt-5 border-t border-zinc-100">
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                        <label className="block text-sm font-semibold text-zinc-700">面試官通知卡片</label>
+                      </div>
+                      <p className="text-xs text-zinc-400 mb-4">面試者滑動 Continue 後，螢幕中央彈出的通知卡片內容</p>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-xs font-bold text-zinc-500 mb-1.5">卡片標題</label>
+                          <input
+                            type="text"
+                            value={draftHeaderContent.reviewNoticeTitle || ''}
+                            onChange={(e: any) => setDraftHeaderContent((prev: any) => ({...prev, reviewNoticeTitle: e.target.value}))}
+                            className="focus:ring-2 focus:ring-zinc-900 block w-full sm:text-sm border-transparent bg-zinc-100 rounded-2xl py-3 px-4 transition-all focus:bg-white text-zinc-900 font-medium"
+                            placeholder="面試者已完成填寫"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-zinc-500 mb-1.5">卡片說明文字</label>
+                          <textarea
+                            value={draftHeaderContent.reviewNoticeText || ''}
+                            onChange={(e: any) => setDraftHeaderContent((prev: any) => ({...prev, reviewNoticeText: e.target.value}))}
+                            rows={3}
+                            className="focus:ring-2 focus:ring-zinc-900 block w-full sm:text-sm border-transparent bg-zinc-100 rounded-2xl py-3.5 px-4 transition-all focus:bg-white resize-none text-zinc-900 font-medium placeholder:text-zinc-400"
+                            placeholder="請面試官確認資料後，向右滑動下方紅色滑軌開始進行評分。"
+                          />
+                        </div>
+                        {/* 預覽卡片 */}
+                        <div className="rounded-2xl border-2 border-red-200 bg-red-50 p-4">
+                          <p className="text-xs font-bold text-red-400 mb-2 uppercase tracking-widest">預覽效果</p>
+                          <p className="font-extrabold text-zinc-900 text-base mb-1">{draftHeaderContent.reviewNoticeTitle || '面試者已完成填寫'}</p>
+                          <p className="text-sm text-zinc-600 leading-relaxed">{draftHeaderContent.reviewNoticeText || '請面試官確認資料後，向右滑動下方紅色滑軌開始進行評分。'}</p>
+                        </div>
+                      </div>
+                    </div>
+
                     {/* 應徵分店設定 */}
                     <div className="pt-6 border-t border-zinc-100">
                       <label className="block text-sm font-semibold text-zinc-700 mb-3">應徵分店選項</label>
@@ -1736,37 +1775,83 @@ export default function App() {
                   <RatingPanel branches={customBranches} onComplete={handleRatingComplete} />
                 </div>
               ) : (
-                /* ===== 階段1：送出成功，等待面試官審核 ===== */
-                <div className="mt-4 space-y-6 pb-10 animate-in fade-in duration-300">
-                  {/* 送出成功提示 */}
-                  <div className="rounded-[2rem] bg-emerald-50 border border-emerald-100 p-6 flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                      <CheckCircle className="w-6 h-6 text-emerald-600" />
-                    </div>
-                    <div>
-                      <p className="font-extrabold text-emerald-800 text-base mb-1">資料已送出成功！</p>
-                      <p className="text-sm text-emerald-600 font-medium leading-relaxed">
-                        <strong>{formData.name}</strong> 的面試資料已同步至系統，請將裝置交給面試官進行審核。
-                      </p>
+                /* ===== 階段1：表單唯讀 + 通知卡片 + 紅色滑軌 ===== */
+                <div className="relative">
+
+                  {/* 通知卡片 — 固定在螢幕中央 */}
+                  <div className="fixed inset-0 z-50 flex items-center justify-center px-6 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-300">
+                      {/* 紅色頂部條 */}
+                      <div className="bg-red-500 px-6 py-5 flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+                          <AlertCircle className="w-6 h-6 text-white" />
+                        </div>
+                        <p className="font-extrabold text-white text-lg leading-tight">
+                          {headerContent.reviewNoticeTitle || '面試者已完成填寫'}
+                        </p>
+                      </div>
+                      {/* 內容 */}
+                      <div className="px-6 py-5">
+                        <p className="text-sm text-zinc-600 leading-relaxed font-medium mb-5">
+                          {headerContent.reviewNoticeText || '請面試官確認資料後，向右滑動下方紅色滑軌開始進行評分。'}
+                        </p>
+                        {/* 應徵者摘要 */}
+                        <div className="bg-zinc-50 rounded-2xl p-4 mb-5 flex flex-wrap gap-2">
+                          <span className="text-xs font-bold bg-white border border-zinc-200 text-zinc-700 px-3 py-1.5 rounded-full">{formData.name}</span>
+                          <span className="text-xs font-bold bg-white border border-zinc-200 text-zinc-700 px-3 py-1.5 rounded-full">{formData.position}</span>
+                          <span className="text-xs font-bold bg-white border border-zinc-200 text-zinc-700 px-3 py-1.5 rounded-full">{formData.branch}</span>
+                        </div>
+                        {/* 紅色滑軌 */}
+                        <SwipeToReview onTrigger={() => setReviewStatus('done')} />
+                        <p className="text-center text-xs text-zinc-400 font-medium mt-2">← 面試官請向右滑動以開始評分</p>
+                      </div>
                     </div>
                   </div>
 
-                  {/* 應徵者基本資訊摘要 */}
-                  <div className="bg-zinc-50 rounded-[2rem] border border-zinc-100 p-6">
-                    <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-4">應徵者資訊</p>
-                    <div className="flex flex-wrap gap-2">
-                      <span className="text-xs font-bold bg-white border border-zinc-200 text-zinc-700 px-3 py-1.5 rounded-full">{formData.name}</span>
-                      <span className="text-xs font-bold bg-white border border-zinc-200 text-zinc-700 px-3 py-1.5 rounded-full">{formData.phone}</span>
-                      <span className="text-xs font-bold bg-white border border-zinc-200 text-zinc-700 px-3 py-1.5 rounded-full">{formData.position}</span>
-                      <span className="text-xs font-bold bg-white border border-zinc-200 text-zinc-700 px-3 py-1.5 rounded-full">{formData.branch}</span>
+                  {/* 背景：唯讀表單（模糊顯示） */}
+                  <div className="pointer-events-none opacity-40 select-none">
+                    <div className="space-y-10">
+                      <div>
+                        <h3 className="text-lg font-bold text-zinc-900 mb-6 flex items-center">
+                          <span className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center mr-3 text-sm">1</span>
+                          基本資料
+                        </h3>
+                        <div className="space-y-3">
+                          {[
+                            { label: '姓名', value: formData.name },
+                            { label: '電話', value: formData.phone },
+                            { label: '職缺', value: formData.position },
+                            { label: '分店', value: formData.branch },
+                            { label: '性別', value: formData.gender === 'male' ? '男' : formData.gender === 'female' ? '女' : formData.gender === 'neutral' ? '中性' : '' },
+                            { label: '生日', value: formData.birthday },
+                            { label: '地址', value: formData.address },
+                          ].filter(f => f.value).map(f => (
+                            <div key={f.label} className="bg-zinc-100 rounded-2xl px-5 py-3.5 flex items-center gap-3">
+                              <span className="text-xs font-bold text-zinc-400 w-8 flex-shrink-0">{f.label}</span>
+                              <span className="text-sm font-semibold text-zinc-700">{f.value}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      {customQuestions.length > 0 && (
+                        <div>
+                          <h3 className="text-lg font-bold text-zinc-900 mb-6 flex items-center">
+                            <span className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center mr-3 text-sm">2</span>
+                            面試問答
+                          </h3>
+                          <div className="space-y-4">
+                            {customQuestions.map((q, i) => (
+                              <div key={q.id}>
+                                <p className="text-xs font-bold text-zinc-500 mb-1">Q{i+1}. {q.text}</p>
+                                <div className="bg-zinc-100 rounded-2xl px-5 py-3.5">
+                                  <p className="text-sm font-semibold text-zinc-700">{formData.answers[q.id] || '—'}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
-
-                  {/* 面試官審核區塊 */}
-                  <div className="space-y-3">
-                    <p className="text-center text-xs font-bold text-zinc-400 uppercase tracking-widest">面試官操作區</p>
-                    <SwipeToReview onTrigger={() => setReviewStatus('done')} />
-                    <p className="text-center text-xs text-zinc-400 font-medium">← 面試官請向右滑動以開始評分</p>
                   </div>
                 </div>
               )
