@@ -291,6 +291,87 @@ const SwipeToSubmit = ({ disabled, isLoading, onSubmitTrigger }: any) => {
 
 
 
+
+// ==========================================
+// 紅色面試官審核滑軌
+// ==========================================
+const SwipeToReview = ({ onTrigger }: { onTrigger: () => void }) => {
+  const [dragOffset, setDragOffset] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const thumbRef = useRef<HTMLDivElement>(null);
+
+  const handleStart = (e: any) => {
+    setIsDragging(true);
+    setStartX(e.type.includes('mouse') ? e.clientX : e.touches[0].clientX);
+  };
+
+  useEffect(() => {
+    const handleMove = (e: MouseEvent | TouchEvent) => {
+      if (!isDragging || !containerRef.current || !thumbRef.current) return;
+      const currentX = 'touches' in e ? e.touches[0].clientX : (e as MouseEvent).clientX;
+      const maxOffset = containerRef.current.clientWidth - thumbRef.current.clientWidth - 16;
+      let newOffset = currentX - startX;
+      if (newOffset < 0) newOffset = 0;
+      if (newOffset > maxOffset) newOffset = maxOffset;
+      setDragOffset(newOffset);
+      if (newOffset >= maxOffset * 0.95) {
+        setIsDragging(false);
+        setDragOffset(maxOffset);
+        onTrigger();
+        setTimeout(() => setDragOffset(0), 300);
+      }
+    };
+    const handleEnd = () => { if (!isDragging) return; setIsDragging(false); setDragOffset(0); };
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMove);
+      document.addEventListener('mouseup', handleEnd);
+      document.addEventListener('touchmove', handleMove, { passive: false });
+      document.addEventListener('touchend', handleEnd);
+    }
+    return () => {
+      document.removeEventListener('mousemove', handleMove);
+      document.removeEventListener('mouseup', handleEnd);
+      document.removeEventListener('touchmove', handleMove);
+      document.removeEventListener('touchend', handleEnd);
+    };
+  }, [isDragging, startX, onTrigger]);
+
+  return (
+    <div
+      ref={containerRef}
+      className="relative w-full h-16 rounded-full flex items-center px-2 overflow-hidden select-none bg-red-100 cursor-grab active:cursor-grabbing"
+    >
+      {/* 進度背景條 */}
+      <div
+        className="absolute left-0 top-0 bottom-0 rounded-full z-0 bg-red-200"
+        style={{ width: dragOffset + 56, transition: isDragging ? 'none' : 'width 0.3s ease-out' }}
+      />
+      {/* 圓形按鈕 */}
+      <div
+        ref={thumbRef}
+        onMouseDown={handleStart}
+        onTouchStart={handleStart}
+        style={{ transform: `translateX(${dragOffset}px)`, transition: isDragging ? 'none' : 'transform 0.3s ease-out' }}
+        className="w-12 h-12 bg-white rounded-full shadow-md flex items-center justify-center z-20 absolute touch-none hover:scale-105 transition-transform"
+      >
+        <AlertCircle className="h-6 w-6 text-red-500" />
+      </div>
+      {/* 中間文字 */}
+      <span className="absolute inset-0 flex items-center justify-center text-[15px] font-bold text-red-700 tracking-wide z-10 pointer-events-none">
+        面試官審核
+      </span>
+      {/* 右側箭頭 */}
+      <div className="absolute right-6 flex items-center space-x-[-8px] text-red-400 z-10 pointer-events-none">
+        <ChevronRight className="w-5 h-5 opacity-40" />
+        <ChevronRight className="w-5 h-5 opacity-70" />
+        <ChevronRight className="w-5 h-5" />
+      </div>
+    </div>
+  );
+};
+
 const RatingPanel = ({ branches, onComplete }: { branches: string[]; onComplete: (d: any) => void }) => {
   const [name, setName] = useState('');
   const [branch, setBranch] = useState('');
@@ -384,6 +465,7 @@ export default function App() {
   const [submittedDocId, setSubmittedDocId] = useState<string>('');
   const submittedDocIdRef = useRef<string>('');  // 同步儲存，避免 closure 讀到舊值
   const [ratingStatus, setRatingStatus] = useState<string>('idle');
+  const [reviewStatus, setReviewStatus] = useState<string>('idle'); // idle | reviewing | done
   
   // 登入 Modal 狀態
   const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
@@ -553,14 +635,65 @@ export default function App() {
     setFormData((prev: any) => ({ ...prev, answers: { ...prev.answers, [questionId]: value } }));
   };
 
+  const scrollToField = (id: string) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // 嘗試 focus 內部的 input/select/textarea
+      const input = el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA'
+        ? el
+        : el.querySelector('input, select, textarea');
+      if (input) setTimeout(() => (input as HTMLElement).focus(), 400);
+    }
+  };
+
   const handleSubmit = async (e: any) => {
     e.preventDefault();
-    const missingRequired = customQuestions.find(q => q.required && !formData.answers[q.id]);
-    if (missingRequired) {
-      setStatus('error');
-      setErrorMessage(`請完成必填題目：${missingRequired.text}`);
-      return;
+
+    // 依序驗證基本資料欄位
+    if (!formData.name.trim()) {
+      setStatus('error'); setErrorMessage('請填寫真實姓名');
+      scrollToField('field-name'); return;
     }
+    if (!formData.phone.trim()) {
+      setStatus('error'); setErrorMessage('請填寫聯絡電話');
+      scrollToField('field-phone'); return;
+    }
+    if (!formData.position) {
+      setStatus('error'); setErrorMessage('請選擇應徵職缺');
+      scrollToField('field-position'); return;
+    }
+    if (!formData.branch) {
+      setStatus('error'); setErrorMessage('請選擇應徵分店');
+      scrollToField('field-branch'); return;
+    }
+    if (!formData.gender) {
+      setStatus('error'); setErrorMessage('請選擇性別');
+      scrollToField('field-gender'); return;
+    }
+    if (!formData.birthday) {
+      setStatus('error'); setErrorMessage('請填寫出生年月日');
+      scrollToField('field-birthday'); return;
+    }
+    if (!formData.address.trim()) {
+      setStatus('error'); setErrorMessage('請填寫居住地址');
+      scrollToField('field-address'); return;
+    }
+
+    // 依序驗證問答題
+    for (const q of customQuestions) {
+      if (q.required && !formData.answers[q.id]?.trim()) {
+        setStatus('error'); setErrorMessage(`請完成必填題目：${q.text}`);
+        scrollToField(`field-q-${q.id}`); return;
+      }
+    }
+
+    // 個資同意
+    if (!formData.consent) {
+      setStatus('error'); setErrorMessage('請勾選同意個資聲明');
+      scrollToField('consent'); return;
+    }
+
     setStatus('submitting');
     setErrorMessage('');
     
@@ -603,6 +736,7 @@ export default function App() {
     setSubmittedDocId('');
     submittedDocIdRef.current = '';
     setRatingStatus('idle');
+    setReviewStatus('idle');
   };
 
   const handleRatingComplete = async (data: { interviewerName: string; branch: string; grade: string; note: string }) => {
@@ -1578,6 +1712,7 @@ export default function App() {
 
             {status === 'success' ? (
               ratingStatus === 'done' ? (
+                /* ===== 階段3：全部完成 ===== */
                 <div className="rounded-[2rem] bg-zinc-50 p-10 text-center border border-zinc-100 animate-in fade-in zoom-in duration-300 mt-4">
                   <div className="mx-auto flex items-center justify-center h-20 w-20 rounded-full bg-emerald-100 mb-6">
                     <CheckCircle className="h-10 w-10 text-emerald-600" />
@@ -1588,8 +1723,9 @@ export default function App() {
                     下一位應徵者 <ArrowRight className="ml-2 h-4 w-4" />
                   </button>
                 </div>
-              ) : (
-                <div className="mt-4 space-y-6 pb-10">
+              ) : reviewStatus === 'done' ? (
+                /* ===== 階段2：面試官評分 ===== */
+                <div className="mt-4 space-y-6 pb-10 animate-in fade-in slide-in-from-bottom-3 duration-300">
                   <div className="text-center pt-8 pb-4">
                     <div className="w-16 h-16 bg-zinc-900 rounded-full mx-auto flex items-center justify-center mb-4">
                       <ClipboardCheck className="w-8 h-8 text-white" />
@@ -1598,6 +1734,40 @@ export default function App() {
                     <p className="text-sm text-zinc-500">應徵者 <strong>{formData.name}</strong> 已完成填寫</p>
                   </div>
                   <RatingPanel branches={customBranches} onComplete={handleRatingComplete} />
+                </div>
+              ) : (
+                /* ===== 階段1：送出成功，等待面試官審核 ===== */
+                <div className="mt-4 space-y-6 pb-10 animate-in fade-in duration-300">
+                  {/* 送出成功提示 */}
+                  <div className="rounded-[2rem] bg-emerald-50 border border-emerald-100 p-6 flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                      <CheckCircle className="w-6 h-6 text-emerald-600" />
+                    </div>
+                    <div>
+                      <p className="font-extrabold text-emerald-800 text-base mb-1">資料已送出成功！</p>
+                      <p className="text-sm text-emerald-600 font-medium leading-relaxed">
+                        <strong>{formData.name}</strong> 的面試資料已同步至系統，請將裝置交給面試官進行審核。
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* 應徵者基本資訊摘要 */}
+                  <div className="bg-zinc-50 rounded-[2rem] border border-zinc-100 p-6">
+                    <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-4">應徵者資訊</p>
+                    <div className="flex flex-wrap gap-2">
+                      <span className="text-xs font-bold bg-white border border-zinc-200 text-zinc-700 px-3 py-1.5 rounded-full">{formData.name}</span>
+                      <span className="text-xs font-bold bg-white border border-zinc-200 text-zinc-700 px-3 py-1.5 rounded-full">{formData.phone}</span>
+                      <span className="text-xs font-bold bg-white border border-zinc-200 text-zinc-700 px-3 py-1.5 rounded-full">{formData.position}</span>
+                      <span className="text-xs font-bold bg-white border border-zinc-200 text-zinc-700 px-3 py-1.5 rounded-full">{formData.branch}</span>
+                    </div>
+                  </div>
+
+                  {/* 面試官審核區塊 */}
+                  <div className="space-y-3">
+                    <p className="text-center text-xs font-bold text-zinc-400 uppercase tracking-widest">面試官操作區</p>
+                    <SwipeToReview onTrigger={() => setReviewStatus('done')} />
+                    <p className="text-center text-xs text-zinc-400 font-medium">← 面試官請向右滑動以開始評分</p>
+                  </div>
                 </div>
               )
             ) : (
@@ -1628,6 +1798,7 @@ export default function App() {
                       </div>
                       <input
                         type="text"
+                        id="field-name"
                         name="name"
                         required
                         value={formData.name}
@@ -1643,6 +1814,7 @@ export default function App() {
                       </div>
                       <input
                         type="tel"
+                        id="field-phone"
                         name="phone"
                         required
                         value={formData.phone}
@@ -1657,6 +1829,7 @@ export default function App() {
                         <Briefcase className="h-5 w-5 text-zinc-400" />
                       </div>
                       <select
+                        id="field-position"
                         name="position"
                         required
                         value={formData.position}
@@ -1677,6 +1850,7 @@ export default function App() {
                         <MapPin className="h-5 w-5 text-zinc-400" />
                       </div>
                       <select
+                        id="field-branch"
                         name="branch"
                         required
                         value={formData.branch}
@@ -1697,6 +1871,7 @@ export default function App() {
                         <User className="h-5 w-5 text-zinc-400" />
                       </div>
                       <select
+                        id="field-gender"
                         name="gender"
                         required
                         value={formData.gender}
@@ -1711,18 +1886,16 @@ export default function App() {
                     </div>
 
                     {/* 出生年月日 */}
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <Calendar className="h-5 w-5 text-zinc-400" />
-                      </div>
+                    <div>
+                      <label className="block text-xs font-bold text-zinc-400 mb-1.5 pl-1 uppercase tracking-widest">出生年月日</label>
                       <input
                         type="date"
+                        id="field-birthday"
                         name="birthday"
                         required
                         value={formData.birthday}
                         onChange={handleBasicInputChange}
-                        className={inputClassName}
-                        placeholder="出生年月日"
+                        className="focus:ring-2 focus:ring-zinc-900 focus:border-zinc-900 block w-full sm:text-sm border-transparent bg-zinc-100 rounded-2xl py-3.5 px-4 transition-all hover:bg-zinc-200 focus:bg-white text-zinc-900 font-medium"
                       />
                     </div>
 
@@ -1733,6 +1906,7 @@ export default function App() {
                       </div>
                       <input
                         type="text"
+                        id="field-address"
                         name="address"
                         required
                         value={formData.address}
@@ -1753,7 +1927,7 @@ export default function App() {
                     </h3>
                     <div className="space-y-8">
                       {customQuestions.map((q, index) => (
-                        <div key={q.id}>
+                        <div key={q.id} id={`field-q-${q.id}`}>
                           <label className="block text-sm font-bold text-zinc-900 mb-3 leading-relaxed">
                             {q.text} {q.required && <span className="text-red-500 ml-1">*</span>}
                           </label>
@@ -1772,7 +1946,7 @@ export default function App() {
                               required={q.required}
                               value={formData.answers[q.id] || ''}
                               onChange={(e: any) => handleAnswerChange(q.id, e.target.value)}
-                              className="focus:ring-2 focus:ring-zinc-900 block w-full sm:text-sm border-transparent bg-zinc-100 rounded-2xl py-3.5 px-5 transition-all focus:bg-white"
+                              className="focus:ring-2 focus:ring-zinc-900 block w-full sm:text-sm border-transparent bg-zinc-100 rounded-2xl py-3.5 px-5 transition-all focus:bg-white text-zinc-900 font-medium placeholder:text-zinc-400"
                               placeholder="請輸入簡短回答..."
                             />
                           )}
@@ -1810,13 +1984,12 @@ export default function App() {
                 {/* ========================================================= */}
                 {/* 完美復刻的專屬 Continue 膠囊按鈕 */}
                 {/* ========================================================= */}
-                <div className="pt-4">
+                <div className="pt-4 space-y-3">
                   <SwipeToSubmit
                     disabled={status === 'submitting' || !formData.consent}
                     isLoading={status === 'submitting'}
                     onSubmitTrigger={() => document.getElementById('hidden-submit-btn')?.click()}
                   />
-                  {/* 隱藏的實際送出按鈕，用來觸發 HTML 原生必填驗證與 onSubmit */}
                   <button type="submit" id="hidden-submit-btn" className="hidden">Submit</button>
                 </div>
 
