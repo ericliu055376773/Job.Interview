@@ -493,6 +493,21 @@ export default function App() {
   const [newPositionInput, setNewPositionInput] = useState<string>('');
   const [draftBranches, setDraftBranches] = useState<string[]>([]);
   const [newBranchInput, setNewBranchInput] = useState<string>('');
+  const [newBranchLat, setNewBranchLat] = useState<string>('');
+  const [newBranchLng, setNewBranchLng] = useState<string>('');
+  const [branchObjects, setBranchObjects] = useState<{name:string,lat:number|null,lng:number|null}[]>([]);
+  const [draftBranchObjects, setDraftBranchObjects] = useState<{name:string,lat:number|null,lng:number|null}[]>([]);
+  // 功能1: 分店拖曳
+  const branchDragIndex = useRef<number|null>(null);
+  const branchDragOverIndex = useRef<number|null>(null);
+  // 功能3: 面試者登入
+  const [branchLoginView, setBranchLoginView] = useState<boolean>(true); // true=選門店頁
+  const [selectedBranchLogin, setSelectedBranchLogin] = useState<string>('');
+  const [gpsChecking, setGpsChecking] = useState<boolean>(false);
+  const [gpsError, setGpsError] = useState<string>('');
+  const [gpsLocked, setGpsLocked] = useState<boolean>(false);
+  // 功能2: 後台門店登入
+  const [branchAdminTab, setBranchAdminTab] = useState<string>('all');
 
   const [customQuestions, setCustomQuestions] = useState<any[]>([
     { id: 'q1', text: '您過去有餐飲業相關經驗嗎？請簡述您的經歷。', type: 'textarea', required: true },
@@ -542,6 +557,15 @@ export default function App() {
             setCustomBranches(data.customBranches);
             setDraftBranches(data.customBranches);
           }
+          if (data.branchObjects) {
+            setBranchObjects(data.branchObjects);
+            setDraftBranchObjects(data.branchObjects);
+          } else if (data.customBranches) {
+            // 舊資料相容：建立沒有GPS的物件
+            const objs = data.customBranches.map((n:string) => ({name:n, lat:null, lng:null}));
+            setBranchObjects(objs);
+            setDraftBranchObjects(objs);
+          }
           if (data.customPositions) {
             setCustomPositions(data.customPositions);
             setDraftPositions(data.customPositions);
@@ -562,6 +586,7 @@ export default function App() {
       setCurrentView('admin');
       setDraftQuestions([...customQuestions]); 
       setDraftBranches([...customBranches]);
+      setDraftBranchObjects([...branchObjects]);
       setDraftPositions([...customPositions]);
       setDraftHeaderContent({ ...headerContent });
       setShowLoginModal(false);
@@ -592,7 +617,7 @@ export default function App() {
   const handleLogoutAttempt = () => {
     const isQuestionsDirty = JSON.stringify(draftQuestions) !== JSON.stringify(customQuestions);
     const isHeaderDirty = JSON.stringify(draftHeaderContent) !== JSON.stringify(headerContent);
-    const isBranchesDirty = JSON.stringify(draftBranches) !== JSON.stringify(customBranches);
+    const isBranchesDirty = JSON.stringify(draftBranches) !== JSON.stringify(customBranches) || JSON.stringify(draftBranchObjects) !== JSON.stringify(branchObjects);
     const isPositionsDirty = JSON.stringify(draftPositions) !== JSON.stringify(customPositions);
     
     if (isQuestionsDirty || isHeaderDirty || isBranchesDirty) {
@@ -739,6 +764,10 @@ export default function App() {
     submittedDocIdRef.current = '';
     setRatingStatus('idle');
     setReviewStatus('idle');
+    setBranchLoginView(true);
+    setSelectedBranchLogin('');
+    setGpsError('');
+    setGpsLocked(false);
   };
 
   const handleRatingComplete = async (data: { interviewerName: string; branch: string; grade: string; note: string }) => {
@@ -829,13 +858,67 @@ export default function App() {
 
   const handleAddBranch = () => {
     const trimmed = newBranchInput.trim();
-    if (trimmed && !draftBranches.includes(trimmed)) {
-      setDraftBranches([...draftBranches, trimmed]);
-      setNewBranchInput('');
-    }
+    if (!trimmed || draftBranches.includes(trimmed)) return;
+    const lat = newBranchLat ? parseFloat(newBranchLat) : null;
+    const lng = newBranchLng ? parseFloat(newBranchLng) : null;
+    setDraftBranches([...draftBranches, trimmed]);
+    setDraftBranchObjects([...draftBranchObjects, { name: trimmed, lat, lng }]);
+    setNewBranchInput(''); setNewBranchLat(''); setNewBranchLng('');
   };
   const handleDeleteBranch = (branch: string) => {
     setDraftBranches(draftBranches.filter(b => b !== branch));
+    setDraftBranchObjects(draftBranchObjects.filter((b: any) => b.name !== branch));
+  };
+
+  // 功能1：分店拖曳排序
+  const handleBranchDragStart = (i: number) => { branchDragIndex.current = i; };
+  const handleBranchDragEnter = (i: number) => { branchDragOverIndex.current = i; };
+  const handleBranchDragEnd = () => {
+    if (branchDragIndex.current === null || branchDragOverIndex.current === null) return;
+    if (branchDragIndex.current === branchDragOverIndex.current) return;
+    const updB = [...draftBranches]; const updO = [...draftBranchObjects];
+    const [splB] = updB.splice(branchDragIndex.current, 1);
+    const [splO] = updO.splice(branchDragIndex.current, 1);
+    updB.splice(branchDragOverIndex.current, 0, splB);
+    updO.splice(branchDragOverIndex.current, 0, splO);
+    setDraftBranches(updB); setDraftBranchObjects(updO);
+    branchDragIndex.current = null; branchDragOverIndex.current = null;
+  };
+
+  // 功能4：GPS 距離計算 (Haversine)
+  const calcDistance = (lat1: number, lng1: number, lat2: number, lng2: number) => {
+    const R = 6371000;
+    const dLat = (lat2-lat1)*Math.PI/180;
+    const dLng = (lng2-lng1)*Math.PI/180;
+    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+    return R*2*Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  };
+
+  // 功能3：GPS 驗證並進入面試表單
+  const handleBranchLoginSubmit = async () => {
+    if (!selectedBranchLogin) { setGpsError('請選擇分店'); return; }
+    const branchObj = branchObjects.find((b: any) => b.name === selectedBranchLogin);
+    if (!branchObj || branchObj.lat === null || branchObj.lng === null) {
+      setBranchLoginView(false); setGpsError('');
+      setFormData((prev: any) => ({...prev, branch: selectedBranchLogin}));
+      return;
+    }
+    setGpsChecking(true); setGpsError('');
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const dist = calcDistance(pos.coords.latitude, pos.coords.longitude, branchObj.lat!, branchObj.lng!);
+        setGpsChecking(false);
+        if (dist <= 50) {
+          setBranchLoginView(false); setGpsLocked(false);
+          setFormData((prev: any) => ({...prev, branch: selectedBranchLogin}));
+        } else {
+          setGpsLocked(true);
+          setGpsError(`您目前距離 ${selectedBranchLogin} 約 ${Math.round(dist)} 公尺，超出允許範圍（50公尺），無法使用面試系統。`);
+        }
+      },
+      () => { setGpsChecking(false); setGpsError('無法取得位置，請確認已開啟定位權限。'); },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
   };
 
   const handleEditQuestion = (q: any) => {
@@ -887,6 +970,7 @@ export default function App() {
         headerContent: draftHeaderContent,
         customQuestions: draftQuestions,
         customBranches: draftBranches,
+        branchObjects: draftBranchObjects,
         customPositions: draftPositions,
         updated_at: new Date().toISOString()
       });
@@ -1019,7 +1103,82 @@ export default function App() {
       )}
 
       <div className="max-w-3xl mx-auto pt-16 px-4 sm:px-6">
-        {currentView === 'admin' ? (
+        {/* ============================================= */}
+        {/* 功能3: 面試者選門店登入頁                      */}
+        {/* ============================================= */}
+        {currentView !== 'admin' && branchLoginView ? (
+          <div className="animate-in fade-in duration-300 min-h-[60vh] flex items-center justify-center">
+            <div className="w-full max-w-sm">
+              {/* LOGO & 標題 */}
+              <div className="text-center mb-10">
+                {headerContent.logoUrl ? (
+                  <img src={headerContent.logoUrl} className="w-20 h-20 rounded-full mx-auto object-cover mb-4 shadow" alt="logo" />
+                ) : (
+                  <div className="w-20 h-20 rounded-full bg-zinc-100 mx-auto flex items-center justify-center mb-4 text-3xl">🍴</div>
+                )}
+                <h1 className="text-2xl font-extrabold text-zinc-900 mb-1">{headerContent.title?.replace('\n',' ') || '面試系統'}</h1>
+                <p className="text-sm text-zinc-500">請選擇面試分店以開始填寫</p>
+              </div>
+
+              <div className="bg-white rounded-[2rem] border border-zinc-100 shadow-sm p-7 space-y-4">
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <MapPin className="h-5 w-5 text-zinc-400" />
+                  </div>
+                  <select
+                    value={selectedBranchLogin}
+                    onChange={(e: any) => { setSelectedBranchLogin(e.target.value); setGpsError(''); setGpsLocked(false); }}
+                    className="block w-full pl-11 py-3.5 text-sm bg-zinc-100 rounded-2xl border-transparent focus:ring-2 focus:ring-zinc-900 appearance-none text-zinc-900 font-semibold"
+                  >
+                    <option value="" disabled>請選擇面試分店...</option>
+                    {customBranches.map(b => <option key={b} value={b}>{b}</option>)}
+                  </select>
+                </div>
+
+                {/* GPS 錯誤訊息 */}
+                {gpsError && (
+                  <div className={`rounded-2xl p-4 border flex items-start gap-3 ${gpsLocked ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
+                    <AlertCircle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${gpsLocked ? 'text-red-500' : 'text-amber-500'}`} />
+                    <p className={`text-sm font-medium leading-relaxed ${gpsLocked ? 'text-red-700' : 'text-amber-700'}`}>{gpsError}</p>
+                  </div>
+                )}
+
+                {!gpsLocked && (
+                  <button
+                    type="button"
+                    onClick={handleBranchLoginSubmit}
+                    disabled={!selectedBranchLogin || gpsChecking}
+                    className="w-full py-4 rounded-full bg-zinc-900 text-white font-extrabold text-base hover:bg-zinc-800 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {gpsChecking ? (
+                      <><Loader2 className="animate-spin w-5 h-5" />定位驗證中...</>
+                    ) : (
+                      <>開始面試 <ArrowRight className="w-5 h-5" /></>
+                    )}
+                  </button>
+                )}
+
+                {gpsLocked && (
+                  <button
+                    type="button"
+                    onClick={() => { setGpsError(''); setGpsLocked(false); setSelectedBranchLogin(''); }}
+                    className="w-full py-3 rounded-full border-2 border-zinc-200 text-zinc-600 font-bold text-sm hover:bg-zinc-50 transition-all"
+                  >
+                    重新選擇分店
+                  </button>
+                )}
+              </div>
+
+              {/* GPS 說明 */}
+              {selectedBranchLogin && !gpsError && (() => {
+                const b = branchObjects.find((x: any) => x.name === selectedBranchLogin);
+                return b?.lat ? (
+                  <p className="text-center text-xs text-zinc-400 mt-4">📍 此分店已設定 GPS 定位，需在 50 公尺內才能使用</p>
+                ) : null;
+              })()}
+            </div>
+          </div>
+        ) : currentView === 'admin' ? (
           /* ========================================================================================= */
           /* 後台管理端畫面 */
           /* ========================================================================================= */
@@ -1182,36 +1341,69 @@ export default function App() {
 
                     {/* 應徵分店設定 */}
                     <div className="pt-6 border-t border-zinc-100">
-                      <label className="block text-sm font-semibold text-zinc-700 mb-3">應徵分店選項</label>
-                      <div className="flex space-x-3 mb-4">
+                      <label className="block text-sm font-semibold text-zinc-700 mb-1">應徵分店選項</label>
+                      <p className="text-xs text-zinc-400 mb-3">可拖曳 ⠿ 調整順序，GPS 定位設定後面試者需在 50 公尺內才能使用</p>
+                      {/* 新增分店 */}
+                      <div className="space-y-2 mb-4">
                         <input
                           type="text"
                           value={newBranchInput}
                           onChange={(e: any) => setNewBranchInput(e.target.value)}
-                          placeholder="輸入分店名稱 (例如：虎尾店)"
-                          className="focus:ring-2 focus:ring-zinc-900 block w-full sm:text-sm border-transparent bg-zinc-100 rounded-2xl py-3 px-4 transition-all focus:bg-white"
+                          placeholder="分店名稱（例如：虎尾店）"
+                          className="focus:ring-2 focus:ring-zinc-900 block w-full sm:text-sm border-transparent bg-zinc-100 rounded-2xl py-3 px-4 transition-all focus:bg-white text-zinc-900 font-medium"
                           onKeyDown={(e: any) => { if (e.key === 'Enter') { e.preventDefault(); handleAddBranch(); } }}
                         />
+                        <div className="flex gap-2">
+                          <input
+                            type="number"
+                            value={newBranchLat}
+                            onChange={(e: any) => setNewBranchLat(e.target.value)}
+                            placeholder="緯度 (選填，例如：23.7055)"
+                            className="focus:ring-2 focus:ring-zinc-900 block w-full sm:text-xs border-transparent bg-zinc-100 rounded-2xl py-2.5 px-4 transition-all focus:bg-white text-zinc-900"
+                            step="any"
+                          />
+                          <input
+                            type="number"
+                            value={newBranchLng}
+                            onChange={(e: any) => setNewBranchLng(e.target.value)}
+                            placeholder="經度 (選填，例如：120.5390)"
+                            className="focus:ring-2 focus:ring-zinc-900 block w-full sm:text-xs border-transparent bg-zinc-100 rounded-2xl py-2.5 px-4 transition-all focus:bg-white text-zinc-900"
+                            step="any"
+                          />
+                        </div>
                         <button
                           onClick={handleAddBranch}
                           disabled={!newBranchInput.trim()}
-                          className="px-6 py-3 bg-zinc-900 text-white rounded-2xl font-bold hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all whitespace-nowrap"
+                          className="w-full py-3 bg-zinc-900 text-white rounded-2xl font-bold hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                         >
                           新增分店
                         </button>
                       </div>
-                      
+
                       {draftBranches.length === 0 ? (
                         <p className="text-sm text-zinc-400 font-medium bg-zinc-50 py-4 text-center rounded-2xl">目前尚無任何分店選項</p>
                       ) : (
-                        <div className="flex flex-wrap gap-2">
-                          {draftBranches.map(branch => (
-                            <div key={branch} className="flex items-center bg-zinc-100 border border-zinc-200 px-4 py-2 rounded-full">
-                              <span className="text-[13px] font-bold text-zinc-800 mr-2">{branch}</span>
-                              <button 
-                                onClick={() => handleDeleteBranch(branch)}
-                                className="text-zinc-400 hover:text-red-500 transition-colors"
-                              >
+                        <div className="space-y-2">
+                          {draftBranchObjects.map((branch: any, idx: number) => (
+                            <div
+                              key={branch.name}
+                              draggable
+                              onDragStart={() => handleBranchDragStart(idx)}
+                              onDragEnter={() => handleBranchDragEnter(idx)}
+                              onDragEnd={handleBranchDragEnd}
+                              onDragOver={(e: any) => e.preventDefault()}
+                              className="flex items-center bg-zinc-50 border border-zinc-200 px-3 py-2.5 rounded-2xl gap-2 active:opacity-60"
+                            >
+                              <span className="text-zinc-300 hover:text-zinc-500 cursor-grab select-none text-lg">⠿</span>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-bold text-zinc-800">{branch.name}</p>
+                                {branch.lat && branch.lng ? (
+                                  <p className="text-xs text-emerald-600 font-medium">📍 {branch.lat.toFixed(4)}, {branch.lng.toFixed(4)}</p>
+                                ) : (
+                                  <p className="text-xs text-zinc-400">未設定 GPS（不限定位置）</p>
+                                )}
+                              </div>
+                              <button onClick={() => handleDeleteBranch(branch.name)} className="text-zinc-400 hover:text-red-500 transition-colors flex-shrink-0">
                                 <Trash2 className="w-4 h-4" />
                               </button>
                             </div>
@@ -1725,6 +1917,7 @@ export default function App() {
                     setCurrentView('admin');
                     setDraftQuestions([...customQuestions]);
                     setDraftBranches([...customBranches]);
+      setDraftBranchObjects([...branchObjects]);
       setDraftPositions([...customPositions]);
                     setDraftHeaderContent({ ...headerContent });
                   } else {
