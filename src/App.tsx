@@ -179,6 +179,177 @@ const ImageCropper = ({ imageUrl, onCrop, onCancel }: any) => {
 };
 
 // ==========================================
+// ==========================================
+// 門店管理介面 Component（員工管理 + 評分總覽）
+// ==========================================
+const BranchManageView = ({ selectedBranch, branchManageTab, setBranchManageTab, candidatesList, isLoadingCandidates, expandedCardId, setExpandedCardId, onBack }: any) => {
+  const list = candidatesList.filter((c: any) => c.applied_branch === selectedBranch);
+
+  return (
+    <div className="bg-white min-h-screen">
+      {/* 頂部標題 */}
+      <div className="flex items-center justify-between px-6 pt-10 pb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-full bg-zinc-100 flex items-center justify-center">
+            <MapPin className="w-5 h-5 text-zinc-700" />
+          </div>
+          <div>
+            <h2 className="text-xl font-extrabold text-zinc-900">{selectedBranch}</h2>
+            <p className="text-xs text-zinc-400 font-medium">評分與管理</p>
+          </div>
+        </div>
+        <button onClick={onBack}
+          className="flex items-center gap-1.5 px-4 py-2.5 bg-zinc-100 text-zinc-600 font-bold text-sm rounded-full hover:bg-zinc-200 active:scale-95 transition-all">
+          <ArrowRight className="w-4 h-4 rotate-180" /> 返回
+        </button>
+      </div>
+
+      {/* 分頁切換 */}
+      <div className="flex gap-3 px-6 mb-6">
+        <button onClick={() => setBranchManageTab('employees')}
+          className={"flex-1 py-4 font-bold rounded-[1.5rem] transition-all flex items-center justify-center gap-2 " + (branchManageTab === 'employees' ? 'bg-zinc-900 text-white shadow-md' : 'bg-zinc-50 text-zinc-500 border border-zinc-200 hover:bg-zinc-100')}>
+          <Users className="w-5 h-5" /> 員工管理
+        </button>
+        <button onClick={() => setBranchManageTab('ratings')}
+          className={"flex-1 py-4 font-bold rounded-[1.5rem] transition-all flex items-center justify-center gap-2 " + (branchManageTab === 'ratings' ? 'bg-zinc-900 text-white shadow-md' : 'bg-zinc-50 text-zinc-500 border border-zinc-200 hover:bg-zinc-100')}>
+          <ClipboardCheck className="w-5 h-5" /> 評分總覽
+        </button>
+      </div>
+
+      <div className="px-6 pb-12">
+        {/* 員工管理 */}
+        {branchManageTab === 'employees' && (
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm font-bold text-zinc-500">{selectedBranch} 應徵者</p>
+              <span className="text-xs font-bold bg-zinc-100 text-zinc-500 px-3 py-1.5 rounded-full">{list.length} 人</span>
+            </div>
+            {isLoadingCandidates ? (
+              <div className="py-20 text-center flex flex-col items-center text-zinc-400">
+                <Loader2 className="animate-spin w-7 h-7 mb-3" />載入中...
+              </div>
+            ) : list.length === 0 ? (
+              <div className="py-20 text-center bg-zinc-50 rounded-3xl border border-dashed border-zinc-200">
+                <p className="text-zinc-400 font-medium">目前尚無應徵者資料</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {list.map((candidate: any) => {
+                  const g = GRADE_OPTIONS.find((x: any) => x.value === candidate.interview_grade);
+                  const cardId = 'bm-' + candidate.id;
+                  const isOpen = expandedCardId === cardId;
+                  return (
+                    <div key={candidate.id} className={"rounded-2xl border overflow-hidden transition-all " + (isOpen ? 'border-zinc-300 shadow-sm' : 'border-zinc-100')}>
+                      <button type="button" onClick={() => setExpandedCardId(isOpen ? null : cardId)}
+                        className="w-full bg-zinc-50 hover:bg-zinc-100 px-5 py-4 flex items-center justify-between text-left transition-colors">
+                        <div className="flex items-center gap-3 min-w-0">
+                          {g
+                            ? <span className={"w-9 h-9 rounded-full " + g.color + " text-white font-extrabold text-sm flex items-center justify-center flex-shrink-0"}>{g.value}</span>
+                            : <span className="w-9 h-9 rounded-full bg-zinc-200 text-zinc-400 text-xs font-bold flex items-center justify-center flex-shrink-0">?</span>
+                          }
+                          <div className="min-w-0">
+                            <p className="font-bold text-zinc-900 text-sm truncate">{candidate.candidate_name}</p>
+                            <p className="text-xs text-zinc-400 truncate">{candidate.applied_position} · {g ? g.desc : '待評分'}</p>
+                          </div>
+                        </div>
+                        <ChevronRight className={"w-4 h-4 text-zinc-400 transition-transform flex-shrink-0 ml-2 " + (isOpen ? 'rotate-90' : '')} />
+                      </button>
+                      {isOpen && (
+                        <div className="bg-white border-t border-zinc-100 px-5 pb-5 pt-4 space-y-3">
+                          <div className="flex flex-wrap gap-2">
+                            <span className="text-xs font-semibold bg-zinc-100 text-zinc-700 px-3 py-1.5 rounded-full">{candidate.candidate_phone}</span>
+                            {candidate.candidate_gender && <span className="text-xs font-semibold bg-zinc-100 text-zinc-700 px-3 py-1.5 rounded-full">{candidate.candidate_gender === 'male' ? '男' : candidate.candidate_gender === 'female' ? '女' : '中性'}</span>}
+                            {candidate.candidate_birthday && <span className="text-xs font-semibold bg-zinc-100 text-zinc-700 px-3 py-1.5 rounded-full">{candidate.candidate_birthday}</span>}
+                            {candidate.submitted_at && <span className="text-xs font-semibold bg-zinc-100 text-zinc-700 px-3 py-1.5 rounded-full">提交：{new Date(candidate.submitted_at).toLocaleString()}</span>}
+                          </div>
+                          {g ? (
+                            <div className={"p-4 rounded-2xl border " + g.light}>
+                              <div className="flex items-center gap-3 mb-2">
+                                <span className={"w-10 h-10 rounded-full " + g.color + " text-white font-extrabold text-lg flex items-center justify-center"}>{g.value}</span>
+                                <div>
+                                  <p className="font-bold text-sm">{g.label} — {g.desc}</p>
+                                  <p className="text-xs opacity-60">面試官：{candidate.interviewer_name || '—'}</p>
+                                </div>
+                              </div>
+                              {candidate.interview_note && <p className="text-sm whitespace-pre-wrap mt-2 pt-2 border-t border-current border-opacity-20">{candidate.interview_note}</p>}
+                            </div>
+                          ) : (
+                            <div className="p-4 rounded-2xl bg-zinc-50 border border-dashed border-zinc-200 text-center text-sm text-zinc-400">尚未評分</div>
+                          )}
+                          {(candidate.custom_answers || []).length > 0 && (
+                            <div className="space-y-2 pt-2 border-t border-zinc-100">
+                              {(candidate.custom_answers || []).map((ans: any, idx: number) => (
+                                <div key={idx}>
+                                  <p className="text-xs font-bold text-zinc-500 mb-1">Q{idx + 1}. {ans.question}</p>
+                                  <p className="text-sm font-semibold text-zinc-800 bg-zinc-50 p-3 rounded-xl border border-zinc-100 whitespace-pre-wrap">{ans.answer || '—'}</p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 評分總覽 */}
+        {branchManageTab === 'ratings' && (
+          <div className="space-y-4">
+            {/* 統計 */}
+            <div className="grid grid-cols-4 gap-3">
+              {GRADE_OPTIONS.map((g: any) => {
+                const cnt = list.filter((c: any) => c.interview_grade === g.value).length;
+                return (
+                  <div key={g.value} className={"p-4 rounded-2xl border text-center " + (cnt > 0 ? g.light : 'bg-zinc-50 border-zinc-100')}>
+                    <span className={"w-10 h-10 rounded-full " + (cnt > 0 ? g.color : 'bg-zinc-200') + " text-white font-extrabold text-lg flex items-center justify-center mx-auto mb-2"}>{g.value}</span>
+                    <p className={"text-2xl font-extrabold " + (cnt === 0 ? 'text-zinc-300' : '')}>{cnt}</p>
+                    <p className={"text-xs mt-0.5 " + (cnt === 0 ? 'text-zinc-300' : 'opacity-70')}>人</p>
+                  </div>
+                );
+              })}
+            </div>
+            {/* 各等級列表 */}
+            {list.filter((c: any) => c.interview_grade).length === 0 ? (
+              <div className="py-16 text-center bg-zinc-50 rounded-3xl border border-dashed border-zinc-200">
+                <p className="text-zinc-400 font-medium">尚無評分紀錄</p>
+              </div>
+            ) : (
+              GRADE_OPTIONS.map((g: any) => {
+                const group = list.filter((c: any) => c.interview_grade === g.value);
+                if (!group.length) return null;
+                return (
+                  <div key={g.value} className="bg-white rounded-[2rem] border border-zinc-100 overflow-hidden shadow-sm">
+                    <div className={"px-6 py-4 flex items-center gap-3 border-b border-current border-opacity-20 " + g.light}>
+                      <span className={"w-10 h-10 rounded-full " + g.color + " text-white font-extrabold text-lg flex items-center justify-center"}>{g.value}</span>
+                      <div>
+                        <p className="font-extrabold">{g.label} — {g.desc}</p>
+                        <p className="text-xs opacity-60">共 {group.length} 人</p>
+                      </div>
+                    </div>
+                    <div className="divide-y divide-zinc-50">
+                      {group.map((c: any) => (
+                        <div key={c.id} className="px-6 py-4">
+                          <p className="font-bold text-zinc-900 text-sm">{c.candidate_name}</p>
+                          <p className="text-xs text-zinc-400 mt-0.5">面試官：{c.interviewer_name || '—'} · {c.candidate_phone}</p>
+                          {c.interview_note && <p className="text-sm text-zinc-600 mt-2 bg-zinc-50 p-3 rounded-xl whitespace-pre-wrap">{c.interview_note}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // 滑動解鎖按鈕 (Swipe to Submit)
 // ==========================================
 const SwipeToSubmit = ({ disabled, isLoading, onSubmitTrigger }: any) => {
@@ -447,13 +618,15 @@ export default function App() {
     }
   }, []);
 
-  const [currentView, setCurrentView] = useState<string>('candidate');
+  const [currentView, setCurrentView] = useState<string>('branchSelect'); // branchSelect | branchHome | candidate | admin | branchManage
   
   // 記錄 Firebase 登入狀態
   const [user, setUser] = useState<any>(null);
 
   // 後台主分類狀態
   const [adminMainTab, setAdminMainTab] = useState<string>('settings'); 
+  const [selectedBranch, setSelectedBranch] = useState<string>(''); // 門店選擇登入
+  const [branchManageTab, setBranchManageTab] = useState<string>('employees'); // employees | ratings
   const [adminEmployeeTab, setAdminEmployeeTab] = useState<string>('all'); 
   const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -493,24 +666,6 @@ export default function App() {
   const [newPositionInput, setNewPositionInput] = useState<string>('');
   const [draftBranches, setDraftBranches] = useState<string[]>([]);
   const [newBranchInput, setNewBranchInput] = useState<string>('');
-  const [newBranchLat, setNewBranchLat] = useState<string>('');
-  const [newBranchLng, setNewBranchLng] = useState<string>('');
-  const [branchObjects, setBranchObjects] = useState<{name:string,lat:number|null,lng:number|null}[]>([]);
-  const [draftBranchObjects, setDraftBranchObjects] = useState<{name:string,lat:number|null,lng:number|null}[]>([]);
-  // 功能1: 分店拖曳
-  const branchDragIndex = useRef<number|null>(null);
-  const branchDragOverIndex = useRef<number|null>(null);
-  // 功能3: 面試者登入
-  const [branchLoginView, setBranchLoginView] = useState<boolean>(true); // true=選門店頁
-  const [selectedBranchLogin, setSelectedBranchLogin] = useState<string>('');
-  const [gpsChecking, setGpsChecking] = useState<boolean>(false);
-  const [gpsError, setGpsError] = useState<string>('');
-  const [gpsLocked, setGpsLocked] = useState<boolean>(false);
-  // 功能2: 門店查看模式
-  const [branchViewMode, setBranchViewMode] = useState<boolean>(false); // true = 門店查看介面
-  const [branchViewSelected, setBranchViewSelected] = useState<string>('');
-  const [branchViewTab, setBranchViewTab] = useState<string>('employees'); // employees | ratings
-  const [branchAdminTab, setBranchAdminTab] = useState<string>('all');
 
   const [customQuestions, setCustomQuestions] = useState<any[]>([
     { id: 'q1', text: '您過去有餐飲業相關經驗嗎？請簡述您的經歷。', type: 'textarea', required: true },
@@ -560,15 +715,6 @@ export default function App() {
             setCustomBranches(data.customBranches);
             setDraftBranches(data.customBranches);
           }
-          if (data.branchObjects) {
-            setBranchObjects(data.branchObjects);
-            setDraftBranchObjects(data.branchObjects);
-          } else if (data.customBranches) {
-            // 舊資料相容：建立沒有GPS的物件
-            const objs = data.customBranches.map((n:string) => ({name:n, lat:null, lng:null}));
-            setBranchObjects(objs);
-            setDraftBranchObjects(objs);
-          }
           if (data.customPositions) {
             setCustomPositions(data.customPositions);
             setDraftPositions(data.customPositions);
@@ -589,7 +735,6 @@ export default function App() {
       setCurrentView('admin');
       setDraftQuestions([...customQuestions]); 
       setDraftBranches([...customBranches]);
-      setDraftBranchObjects([...branchObjects]);
       setDraftPositions([...customPositions]);
       setDraftHeaderContent({ ...headerContent });
       setShowLoginModal(false);
@@ -620,14 +765,14 @@ export default function App() {
   const handleLogoutAttempt = () => {
     const isQuestionsDirty = JSON.stringify(draftQuestions) !== JSON.stringify(customQuestions);
     const isHeaderDirty = JSON.stringify(draftHeaderContent) !== JSON.stringify(headerContent);
-    const isBranchesDirty = JSON.stringify(draftBranches) !== JSON.stringify(customBranches) || JSON.stringify(draftBranchObjects) !== JSON.stringify(branchObjects);
+    const isBranchesDirty = JSON.stringify(draftBranches) !== JSON.stringify(customBranches);
     const isPositionsDirty = JSON.stringify(draftPositions) !== JSON.stringify(customPositions);
     
     if (isQuestionsDirty || isHeaderDirty || isBranchesDirty) {
       setShowUnsavedModal(true);
     } else {
       signOut(auth).then(() => {
-        setCurrentView('candidate');
+        setCurrentView('branchSelect');
       });
     }
   };
@@ -635,7 +780,7 @@ export default function App() {
   const handleConfirmLogout = () => {
     signOut(auth).then(() => {
       setShowUnsavedModal(false);
-      setCurrentView('candidate');
+      setCurrentView('branchSelect');
     });
   };
 
@@ -761,16 +906,13 @@ export default function App() {
   };
 
   const resetForm = () => {
-    setFormData({ name: '', phone: '', position: '', branch: '', gender: '', address: '', birthday: '', answers: {}, consent: false });
+    setFormData({ name: '', phone: '', position: '', branch: selectedBranch, gender: '', address: '', birthday: '', answers: {}, consent: false });
     setStatus('idle');
     setSubmittedDocId('');
     submittedDocIdRef.current = '';
     setRatingStatus('idle');
     setReviewStatus('idle');
-    setBranchLoginView(true);
-    setSelectedBranchLogin('');
-    setGpsError('');
-    setGpsLocked(false);
+    setCurrentView('branchHome');
   };
 
   const handleRatingComplete = async (data: { interviewerName: string; branch: string; grade: string; note: string }) => {
@@ -861,67 +1003,13 @@ export default function App() {
 
   const handleAddBranch = () => {
     const trimmed = newBranchInput.trim();
-    if (!trimmed || draftBranches.includes(trimmed)) return;
-    const lat = newBranchLat ? parseFloat(newBranchLat) : null;
-    const lng = newBranchLng ? parseFloat(newBranchLng) : null;
-    setDraftBranches([...draftBranches, trimmed]);
-    setDraftBranchObjects([...draftBranchObjects, { name: trimmed, lat, lng }]);
-    setNewBranchInput(''); setNewBranchLat(''); setNewBranchLng('');
+    if (trimmed && !draftBranches.includes(trimmed)) {
+      setDraftBranches([...draftBranches, trimmed]);
+      setNewBranchInput('');
+    }
   };
   const handleDeleteBranch = (branch: string) => {
     setDraftBranches(draftBranches.filter(b => b !== branch));
-    setDraftBranchObjects(draftBranchObjects.filter((b: any) => b.name !== branch));
-  };
-
-  // 功能1：分店拖曳排序
-  const handleBranchDragStart = (i: number) => { branchDragIndex.current = i; };
-  const handleBranchDragEnter = (i: number) => { branchDragOverIndex.current = i; };
-  const handleBranchDragEnd = () => {
-    if (branchDragIndex.current === null || branchDragOverIndex.current === null) return;
-    if (branchDragIndex.current === branchDragOverIndex.current) return;
-    const updB = [...draftBranches]; const updO = [...draftBranchObjects];
-    const [splB] = updB.splice(branchDragIndex.current, 1);
-    const [splO] = updO.splice(branchDragIndex.current, 1);
-    updB.splice(branchDragOverIndex.current, 0, splB);
-    updO.splice(branchDragOverIndex.current, 0, splO);
-    setDraftBranches(updB); setDraftBranchObjects(updO);
-    branchDragIndex.current = null; branchDragOverIndex.current = null;
-  };
-
-  // 功能4：GPS 距離計算 (Haversine)
-  const calcDistance = (lat1: number, lng1: number, lat2: number, lng2: number) => {
-    const R = 6371000;
-    const dLat = (lat2-lat1)*Math.PI/180;
-    const dLng = (lng2-lng1)*Math.PI/180;
-    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
-    return R*2*Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  };
-
-  // 功能3：GPS 驗證並進入面試表單
-  const handleBranchLoginSubmit = async () => {
-    if (!selectedBranchLogin) { setGpsError('請選擇分店'); return; }
-    const branchObj = branchObjects.find((b: any) => b.name === selectedBranchLogin);
-    if (!branchObj || branchObj.lat === null || branchObj.lng === null) {
-      setBranchLoginView(false); setGpsError('');
-      setFormData((prev: any) => ({...prev, branch: selectedBranchLogin}));
-      return;
-    }
-    setGpsChecking(true); setGpsError('');
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const dist = calcDistance(pos.coords.latitude, pos.coords.longitude, branchObj.lat!, branchObj.lng!);
-        setGpsChecking(false);
-        if (dist <= 50) {
-          setBranchLoginView(false); setGpsLocked(false);
-          setFormData((prev: any) => ({...prev, branch: selectedBranchLogin}));
-        } else {
-          setGpsLocked(true);
-          setGpsError(`您目前距離 ${selectedBranchLogin} 約 ${Math.round(dist)} 公尺，超出允許範圍（50公尺），無法使用面試系統。`);
-        }
-      },
-      () => { setGpsChecking(false); setGpsError('無法取得位置，請確認已開啟定位權限。'); },
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
   };
 
   const handleEditQuestion = (q: any) => {
@@ -973,7 +1061,6 @@ export default function App() {
         headerContent: draftHeaderContent,
         customQuestions: draftQuestions,
         customBranches: draftBranches,
-        branchObjects: draftBranchObjects,
         customPositions: draftPositions,
         updated_at: new Date().toISOString()
       });
@@ -990,7 +1077,8 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (currentView === 'admin' && (adminMainTab === 'employees' || adminMainTab === 'ratings')) {
+    if (currentView === 'admin' && (adminMainTab === 'employees' || adminMainTab === 'ratings') ||
+        currentView === 'branchManage') {
       const fetchCandidates = async () => {
         setIsLoadingCandidates(true);
         try {
@@ -1083,33 +1171,6 @@ export default function App() {
                 <button type="submit" className="flex-1 py-3.5 rounded-full bg-zinc-900 text-white font-bold hover:bg-zinc-800 active:scale-95 transition-all shadow-md">確認登入</button>
               </div>
             </form>
-
-            {/* 門店查看入口 */}
-            {customBranches.length > 0 && (
-              <div className="mt-5 pt-5 border-t border-zinc-100">
-                <p className="text-xs font-bold text-zinc-400 text-center uppercase tracking-widest mb-3">門店查看（免密碼）</p>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <MapPin className="h-4 w-4 text-zinc-400" />
-                  </div>
-                  <select
-                    defaultValue=""
-                    onChange={(e: any) => {
-                      if (!e.target.value) return;
-                      setBranchViewSelected(e.target.value);
-                      setBranchViewMode(true);
-                      setBranchViewTab('employees');
-                      setShowLoginModal(false);
-                      setCurrentView('admin');
-                    }}
-                    className="block w-full pl-10 py-3 text-sm bg-zinc-50 border border-zinc-200 rounded-2xl appearance-none text-zinc-700 font-semibold focus:ring-2 focus:ring-zinc-900 focus:outline-none"
-                  >
-                    <option value="" disabled>選擇門店進入查看...</option>
-                    {customBranches.map(b => <option key={b} value={b}>{b}</option>)}
-                  </select>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       )}
@@ -1132,251 +1193,97 @@ export default function App() {
         </div>
       )}
 
-      <div className="max-w-3xl mx-auto pt-16 px-4 sm:px-6">
-        {/* ============================================= */}
-        {/* 功能3: 面試者選門店登入頁                      */}
-        {/* ============================================= */}
-        {currentView !== 'admin' && branchLoginView ? (
-          <div className="animate-in fade-in duration-300 min-h-[60vh] flex items-center justify-center">
+      {/* ===== 門店管理介面（獨立全頁） ===== */}
+      {currentView === 'branchManage' && (
+        <BranchManageView
+          selectedBranch={selectedBranch}
+          branchManageTab={branchManageTab}
+          setBranchManageTab={setBranchManageTab}
+          candidatesList={candidatesList}
+          isLoadingCandidates={isLoadingCandidates}
+          expandedCardId={expandedCardId}
+          setExpandedCardId={setExpandedCardId}
+          onBack={() => setCurrentView('branchHome')}
+        />
+      )}
+
+      <div className="max-w-3xl mx-auto pt-16 px-4 sm:px-6" style={{display: currentView === 'branchManage' ? 'none' : 'block'}}>
+
+        {/* ===== 選門店頁 ===== */}
+        {(currentView === 'branchSelect' || currentView === 'branchHome') && (
+          <div className="animate-in fade-in duration-300 min-h-[70vh] flex items-center justify-center">
             <div className="w-full max-w-sm">
-              {/* LOGO & 標題 */}
+              {/* Logo & 標題 */}
               <div className="text-center mb-10">
-                {headerContent.logoUrl ? (
-                  <img src={headerContent.logoUrl} className="w-20 h-20 rounded-full mx-auto object-cover mb-4 shadow" alt="logo" />
-                ) : (
-                  <div className="w-20 h-20 rounded-full bg-zinc-100 mx-auto flex items-center justify-center mb-4 text-3xl">🍴</div>
-                )}
-                <h1 className="text-2xl font-extrabold text-zinc-900 mb-1">{headerContent.title?.replace('\n',' ') || '面試系統'}</h1>
-                <p className="text-sm text-zinc-500">請選擇面試分店以開始填寫</p>
+                {headerContent.logoUrl
+                  ? <img src={headerContent.logoUrl} className="w-20 h-20 rounded-full mx-auto object-cover mb-4 shadow" alt="logo" />
+                  : <div className="w-20 h-20 rounded-full bg-zinc-100 mx-auto flex items-center justify-center mb-4 text-3xl">🍴</div>
+                }
+                <h1 className="text-2xl font-extrabold text-zinc-900 mb-1">{(headerContent.title || '').replace('\n', ' ')}</h1>
               </div>
 
-              <div className="bg-white rounded-[2rem] border border-zinc-100 shadow-sm p-7 space-y-4">
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <MapPin className="h-5 w-5 text-zinc-400" />
+              {currentView === 'branchSelect' ? (
+                /* 選門店 */
+                <div className="bg-white rounded-[2rem] border border-zinc-100 shadow-sm p-7 space-y-4">
+                  <p className="text-sm font-bold text-zinc-500 text-center">請選擇您的門店</p>
+                  <div className="space-y-3">
+                    {customBranches.map((branch: string) => (
+                      <button key={branch} type="button"
+                        onClick={() => { setSelectedBranch(branch); setCurrentView('branchHome'); }}
+                        className="w-full py-4 px-5 bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 rounded-2xl font-bold text-zinc-800 text-left flex items-center justify-between active:scale-[0.98] transition-all">
+                        <span className="flex items-center gap-3">
+                          <MapPin className="w-5 h-5 text-zinc-400" />
+                          {branch}
+                        </span>
+                        <ChevronRight className="w-5 h-5 text-zinc-300" />
+                      </button>
+                    ))}
                   </div>
-                  <select
-                    value={selectedBranchLogin}
-                    onChange={(e: any) => { setSelectedBranchLogin(e.target.value); setGpsError(''); setGpsLocked(false); }}
-                    className="block w-full pl-11 py-3.5 text-sm bg-zinc-100 rounded-2xl border-transparent focus:ring-2 focus:ring-zinc-900 appearance-none text-zinc-900 font-semibold"
-                  >
-                    <option value="" disabled>請選擇面試分店...</option>
-                    {customBranches.map(b => <option key={b} value={b}>{b}</option>)}
-                  </select>
                 </div>
-
-                {/* GPS 錯誤訊息 */}
-                {gpsError && (
-                  <div className={`rounded-2xl p-4 border flex items-start gap-3 ${gpsLocked ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
-                    <AlertCircle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${gpsLocked ? 'text-red-500' : 'text-amber-500'}`} />
-                    <p className={`text-sm font-medium leading-relaxed ${gpsLocked ? 'text-red-700' : 'text-amber-700'}`}>{gpsError}</p>
+              ) : (
+                /* 門店首頁：兩個大按鈕 */
+                <div className="space-y-5">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-zinc-400" />
+                      <span className="text-sm font-bold text-zinc-500">{selectedBranch}</span>
+                    </div>
+                    <button onClick={() => setCurrentView('branchSelect')}
+                      className="text-xs font-bold text-zinc-400 hover:text-zinc-600 transition-colors">切換門店</button>
                   </div>
-                )}
-
-                {!gpsLocked && (
-                  <button
-                    type="button"
-                    onClick={handleBranchLoginSubmit}
-                    disabled={!selectedBranchLogin || gpsChecking}
-                    className="w-full py-4 rounded-full bg-zinc-900 text-white font-extrabold text-base hover:bg-zinc-800 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                  >
-                    {gpsChecking ? (
-                      <><Loader2 className="animate-spin w-5 h-5" />定位驗證中...</>
-                    ) : (
-                      <>開始面試 <ArrowRight className="w-5 h-5" /></>
-                    )}
+                  {/* 面試者填單 */}
+                  <button type="button"
+                    onClick={() => { setCurrentView('candidate'); setFormData((prev: any) => ({...prev, branch: selectedBranch})); }}
+                    className="w-full py-8 bg-zinc-900 text-white rounded-[2rem] font-extrabold text-xl flex flex-col items-center justify-center gap-3 shadow-xl hover:bg-zinc-800 active:scale-[0.98] transition-all">
+                    <div className="w-14 h-14 bg-white/10 rounded-full flex items-center justify-center">
+                      <User className="w-7 h-7" />
+                    </div>
+                    面試者填單
+                    <span className="text-sm font-medium text-white/60">應徵者在此填寫面試資料</span>
                   </button>
-                )}
-
-                {gpsLocked && (
-                  <button
-                    type="button"
-                    onClick={() => { setGpsError(''); setGpsLocked(false); setSelectedBranchLogin(''); }}
-                    className="w-full py-3 rounded-full border-2 border-zinc-200 text-zinc-600 font-bold text-sm hover:bg-zinc-50 transition-all"
-                  >
-                    重新選擇分店
+                  {/* 評分與管理 */}
+                  <button type="button"
+                    onClick={() => setCurrentView('branchManage')}
+                    className="w-full py-8 bg-white border-2 border-zinc-200 text-zinc-900 rounded-[2rem] font-extrabold text-xl flex flex-col items-center justify-center gap-3 shadow-sm hover:border-zinc-400 hover:bg-zinc-50 active:scale-[0.98] transition-all">
+                    <div className="w-14 h-14 bg-zinc-100 rounded-full flex items-center justify-center">
+                      <ClipboardCheck className="w-7 h-7 text-zinc-700" />
+                    </div>
+                    評分與管理
+                    <span className="text-sm font-medium text-zinc-400">查看員工管理與評分總覽</span>
                   </button>
-                )}
-              </div>
-
-              {/* GPS 說明 */}
-              {selectedBranchLogin && !gpsError && (() => {
-                const b = branchObjects.find((x: any) => x.name === selectedBranchLogin);
-                return b?.lat ? (
-                  <p className="text-center text-xs text-zinc-400 mt-4">📍 此分店已設定 GPS 定位，需在 50 公尺內才能使用</p>
-                ) : null;
-              })()}
+                </div>
+              )}
             </div>
           </div>
-        ) : currentView === 'admin' ? (
+        )}
+
+        {currentView === 'admin' ? (
           /* ========================================================================================= */
           /* 後台管理端畫面 */
           /* ========================================================================================= */
           <div className="animate-in fade-in duration-300">
-
-            {/* ================================================ */}
-            {/* 功能2: 門店查看模式（簡化介面，無設定權限）         */}
-            {/* ================================================ */}
-            {branchViewMode ? (
-              <div>
-                {/* 頂部標題列 */}
-                <div className="flex justify-between items-center mb-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-zinc-100 flex items-center justify-center">
-                      <MapPin className="w-5 h-5 text-zinc-700" />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-extrabold text-zinc-900">{branchViewSelected}</h2>
-                      <p className="text-xs text-zinc-400 font-medium">門店查看模式</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => { setBranchViewMode(false); setCurrentView('candidate'); }}
-                    className="flex items-center gap-2 px-4 py-2 bg-zinc-100 text-zinc-600 font-bold text-sm rounded-full hover:bg-zinc-200 transition-all"
-                  >
-                    <LogOut className="w-4 h-4" /> 離開
-                  </button>
-                </div>
-
-                {/* 分頁切換 */}
-                <div className="flex gap-3 mb-6">
-                  <button
-                    onClick={() => setBranchViewTab('employees')}
-                    className={`flex-1 py-4 font-bold text-base rounded-[1.5rem] transition-all flex items-center justify-center gap-2 ${branchViewTab === 'employees' ? 'bg-zinc-900 text-white shadow-md' : 'bg-white text-zinc-500 border border-zinc-200 hover:bg-zinc-50'}`}
-                  >
-                    <Users className="w-5 h-5" /> 員工管理
-                  </button>
-                  <button
-                    onClick={() => setBranchViewTab('ratings')}
-                    className={`flex-1 py-4 font-bold text-base rounded-[1.5rem] transition-all flex items-center justify-center gap-2 ${branchViewTab === 'ratings' ? 'bg-zinc-900 text-white shadow-md' : 'bg-white text-zinc-500 border border-zinc-200 hover:bg-zinc-50'}`}
-                  >
-                    <ClipboardCheck className="w-5 h-5" /> 評分總覽
-                  </button>
-                </div>
-
-                {/* 員工管理 */}
-                {branchViewTab === 'employees' && (() => {
-                  const list = candidatesList.filter(c => c.applied_branch === branchViewSelected);
-                  return (
-                    <div className="bg-white rounded-[2rem] border border-zinc-100 shadow-sm p-6">
-                      <div className="flex items-center mb-6 pb-4 border-b border-zinc-100">
-                        <Users className="w-5 h-5 mr-2 text-zinc-500" />
-                        <h3 className="font-bold text-zinc-900">{branchViewSelected} 應徵者列表</h3>
-                        <span className="ml-auto text-xs font-bold text-zinc-400 bg-zinc-100 px-2.5 py-1 rounded-full">{list.length} 人</span>
-                      </div>
-                      {isLoadingCandidates ? (
-                        <div className="py-16 text-center flex flex-col items-center text-zinc-400"><Loader2 className="animate-spin w-7 h-7 mb-3" />載入中...</div>
-                      ) : list.length === 0 ? (
-                        <div className="py-16 text-center text-zinc-400">目前尚無應徵者資料</div>
-                      ) : (
-                        <div className="space-y-3">
-                          {list.map(candidate => {
-                            const g = GRADE_OPTIONS.find(x => x.value === candidate.interview_grade);
-                            const isOpen = expandedCardId === `bv-${candidate.id}`;
-                            return (
-                              <div key={candidate.id} className={`rounded-2xl border overflow-hidden transition-all ${isOpen ? 'border-zinc-300 shadow-sm' : 'border-zinc-100'}`}>
-                                <button type="button" onClick={() => setExpandedCardId(isOpen ? null : `bv-${candidate.id}`)}
-                                  className="w-full bg-zinc-50 hover:bg-zinc-100 px-5 py-4 flex items-center justify-between text-left transition-colors">
-                                  <div className="flex items-center gap-3 min-w-0">
-                                    {g ? <span className={`w-8 h-8 rounded-full ${g.color} text-white font-extrabold text-xs flex items-center justify-center flex-shrink-0`}>{g.value}</span>
-                                       : <span className="w-8 h-8 rounded-full bg-zinc-200 text-zinc-400 text-xs font-bold flex items-center justify-center flex-shrink-0">?</span>}
-                                    <div className="min-w-0">
-                                      <p className="font-bold text-zinc-900 text-sm truncate">{candidate.candidate_name}</p>
-                                      <p className="text-xs text-zinc-400 truncate">{candidate.applied_position} · {g ? g.desc : '待評分'}</p>
-                                    </div>
-                                  </div>
-                                  <ChevronRight className={`w-4 h-4 text-zinc-400 transition-transform flex-shrink-0 ml-2 ${isOpen ? 'rotate-90' : ''}`} />
-                                </button>
-                                {isOpen && (
-                                  <div className="bg-white border-t border-zinc-100 px-5 pb-5 pt-4 space-y-3">
-                                    <div className="flex flex-wrap gap-2">
-                                      <span className="text-xs font-semibold bg-zinc-100 text-zinc-700 px-3 py-1.5 rounded-full">{candidate.candidate_phone}</span>
-                                      {candidate.candidate_gender && <span className="text-xs font-semibold bg-zinc-100 text-zinc-700 px-3 py-1.5 rounded-full">{candidate.candidate_gender === 'male' ? '男' : candidate.candidate_gender === 'female' ? '女' : '中性'}</span>}
-                                      {candidate.candidate_birthday && <span className="text-xs font-semibold bg-zinc-100 text-zinc-700 px-3 py-1.5 rounded-full">{candidate.candidate_birthday}</span>}
-                                      <span className="text-xs font-semibold bg-zinc-100 text-zinc-700 px-3 py-1.5 rounded-full">提交：{candidate.submitted_at ? new Date(candidate.submitted_at).toLocaleString() : '—'}</span>
-                                    </div>
-                                    {g && (
-                                      <div className={`p-4 rounded-2xl border ${g.light}`}>
-                                        <div className="flex items-center gap-2 mb-2">
-                                          <span className={`w-9 h-9 rounded-full ${g.color} text-white font-extrabold flex items-center justify-center`}>{g.value}</span>
-                                          <div>
-                                            <p className="font-bold text-sm">{g.label} — {g.desc}</p>
-                                            <p className="text-xs opacity-60">面試官：{candidate.interviewer_name}</p>
-                                          </div>
-                                        </div>
-                                        {candidate.interview_note && <p className="text-sm mt-2 pt-2 border-t border-current border-opacity-20 whitespace-pre-wrap">{candidate.interview_note}</p>}
-                                      </div>
-                                    )}
-                                    {(candidate.custom_answers || []).length > 0 && (
-                                      <div className="space-y-2 pt-2 border-t border-zinc-100">
-                                        {(candidate.custom_answers || []).map((ans: any, idx: number) => (
-                                          <div key={idx}>
-                                            <p className="text-xs font-bold text-zinc-500 mb-1">Q{idx+1}. {ans.question}</p>
-                                            <p className="text-sm font-semibold text-zinc-800 bg-zinc-50 p-3 rounded-xl border border-zinc-100 whitespace-pre-wrap">{ans.answer || '—'}</p>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
-
-                {/* 評分總覽 */}
-                {branchViewTab === 'ratings' && (() => {
-                  const list = candidatesList.filter(c => c.applied_branch === branchViewSelected);
-                  const rated = list.filter(c => c.interview_grade);
-                  return (
-                    <div className="space-y-4">
-                      {/* 統計 */}
-                      <div className="grid grid-cols-4 gap-3">
-                        {GRADE_OPTIONS.map(g => {
-                          const cnt = list.filter(c => c.interview_grade === g.value).length;
-                          return (
-                            <div key={g.value} className={`p-4 rounded-2xl border text-center ${cnt > 0 ? g.light : 'bg-zinc-50 border-zinc-100'}`}>
-                              <span className={`w-10 h-10 rounded-full ${cnt > 0 ? g.color : 'bg-zinc-200'} text-white font-extrabold text-lg flex items-center justify-center mx-auto mb-2`}>{g.value}</span>
-                              <p className={`text-2xl font-extrabold ${cnt === 0 ? 'text-zinc-300' : ''}`}>{cnt}</p>
-                              <p className={`text-xs mt-0.5 ${cnt === 0 ? 'text-zinc-300' : 'opacity-70'}`}>人</p>
-                            </div>
-                          );
-                        })}
-                      </div>
-                      {rated.length === 0 ? (
-                        <div className="py-16 text-center bg-white rounded-3xl border border-dashed border-zinc-200"><p className="text-zinc-400">尚無評分紀錄</p></div>
-                      ) : GRADE_OPTIONS.map(g => {
-                        const group = list.filter(c => c.interview_grade === g.value);
-                        if (!group.length) return null;
-                        return (
-                          <div key={g.value} className="bg-white rounded-[2rem] border border-zinc-100 overflow-hidden">
-                            <div className={`px-6 py-4 flex items-center gap-3 border-b border-current border-opacity-20 ${g.light}`}>
-                              <span className={`w-10 h-10 rounded-full ${g.color} text-white font-extrabold text-lg flex items-center justify-center`}>{g.value}</span>
-                              <div><p className="font-extrabold">{g.label} — {g.desc}</p><p className="text-xs opacity-60">共 {group.length} 人</p></div>
-                            </div>
-                            <div className="divide-y divide-zinc-50">
-                              {group.map(c => (
-                                <div key={c.id} className="px-6 py-4">
-                                  <p className="font-bold text-zinc-900 text-sm">{c.candidate_name}</p>
-                                  <p className="text-xs text-zinc-400 mt-0.5">面試官：{c.interviewer_name || '—'} · {c.candidate_phone}</p>
-                                  {c.interview_note && <p className="text-sm text-zinc-600 mt-2 bg-zinc-50 p-3 rounded-xl whitespace-pre-wrap">{c.interview_note}</p>}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })()}
-              </div>
-            ) : (
-            <div>
-              <div className="flex justify-between items-center mb-8">
+            
+            <div className="flex justify-between items-center mb-8">
               <h2 className="text-2xl font-extrabold text-zinc-900 tracking-tight flex items-center">
                 <SettingsIcon className="w-6 h-6 mr-2 text-zinc-900" />
                 面試單後台管理
@@ -1533,69 +1440,36 @@ export default function App() {
 
                     {/* 應徵分店設定 */}
                     <div className="pt-6 border-t border-zinc-100">
-                      <label className="block text-sm font-semibold text-zinc-700 mb-1">應徵分店選項</label>
-                      <p className="text-xs text-zinc-400 mb-3">可拖曳 ⠿ 調整順序，GPS 定位設定後面試者需在 50 公尺內才能使用</p>
-                      {/* 新增分店 */}
-                      <div className="space-y-2 mb-4">
+                      <label className="block text-sm font-semibold text-zinc-700 mb-3">應徵分店選項</label>
+                      <div className="flex space-x-3 mb-4">
                         <input
                           type="text"
                           value={newBranchInput}
                           onChange={(e: any) => setNewBranchInput(e.target.value)}
-                          placeholder="分店名稱（例如：虎尾店）"
-                          className="focus:ring-2 focus:ring-zinc-900 block w-full sm:text-sm border-transparent bg-zinc-100 rounded-2xl py-3 px-4 transition-all focus:bg-white text-zinc-900 font-medium"
+                          placeholder="輸入分店名稱 (例如：虎尾店)"
+                          className="focus:ring-2 focus:ring-zinc-900 block w-full sm:text-sm border-transparent bg-zinc-100 rounded-2xl py-3 px-4 transition-all focus:bg-white"
                           onKeyDown={(e: any) => { if (e.key === 'Enter') { e.preventDefault(); handleAddBranch(); } }}
                         />
-                        <div className="flex gap-2">
-                          <input
-                            type="number"
-                            value={newBranchLat}
-                            onChange={(e: any) => setNewBranchLat(e.target.value)}
-                            placeholder="緯度 (選填，例如：23.7055)"
-                            className="focus:ring-2 focus:ring-zinc-900 block w-full sm:text-xs border-transparent bg-zinc-100 rounded-2xl py-2.5 px-4 transition-all focus:bg-white text-zinc-900"
-                            step="any"
-                          />
-                          <input
-                            type="number"
-                            value={newBranchLng}
-                            onChange={(e: any) => setNewBranchLng(e.target.value)}
-                            placeholder="經度 (選填，例如：120.5390)"
-                            className="focus:ring-2 focus:ring-zinc-900 block w-full sm:text-xs border-transparent bg-zinc-100 rounded-2xl py-2.5 px-4 transition-all focus:bg-white text-zinc-900"
-                            step="any"
-                          />
-                        </div>
                         <button
                           onClick={handleAddBranch}
                           disabled={!newBranchInput.trim()}
-                          className="w-full py-3 bg-zinc-900 text-white rounded-2xl font-bold hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                          className="px-6 py-3 bg-zinc-900 text-white rounded-2xl font-bold hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all whitespace-nowrap"
                         >
                           新增分店
                         </button>
                       </div>
-
+                      
                       {draftBranches.length === 0 ? (
                         <p className="text-sm text-zinc-400 font-medium bg-zinc-50 py-4 text-center rounded-2xl">目前尚無任何分店選項</p>
                       ) : (
-                        <div className="space-y-2">
-                          {draftBranchObjects.map((branch: any, idx: number) => (
-                            <div
-                              key={branch.name}
-                              draggable
-                              onDragStart={() => handleBranchDragStart(idx)}
-                              onDragEnter={() => handleBranchDragEnter(idx)}
-                              onDragEnd={handleBranchDragEnd}
-                              onDragOver={(e: any) => e.preventDefault()}
-                              className="flex items-center bg-zinc-50 border border-zinc-200 px-3 py-2.5 rounded-2xl gap-2 active:opacity-60"
-                            >
-                              <span className="text-zinc-300 hover:text-zinc-500 cursor-grab select-none text-lg">⠿</span>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-bold text-zinc-800">{branch.name}</p>
-                                {branch.lat && branch.lng ? (
-                                  <p className="text-xs text-emerald-600 font-medium">📍 {branch.lat.toFixed(4)}, {branch.lng.toFixed(4)}</p>
-                                ) : (
-                                  <p className="text-xs text-zinc-400">未設定 GPS（不限定位置）</p>
-                                )}
-                              </div>
-                              <button onClick={() => handleDeleteBranch(branch.name)} className="text-zinc-400 hover:text-red-500 transition-colors flex-shrink-0">
+                        <div className="flex flex-wrap gap-2">
+                          {draftBranches.map(branch => (
+                            <div key={branch} className="flex items-center bg-zinc-100 border border-zinc-200 px-4 py-2 rounded-full">
+                              <span className="text-[13px] font-bold text-zinc-800 mr-2">{branch}</span>
+                              <button 
+                                onClick={() => handleDeleteBranch(branch)}
+                                className="text-zinc-400 hover:text-red-500 transition-colors"
+                              >
                                 <Trash2 className="w-4 h-4" />
                               </button>
                             </div>
@@ -2094,10 +1968,8 @@ export default function App() {
             )}
 
           </div>
-            </div>
-            )}
 
-        ) : (
+        ) : currentView === 'candidate' ? (
           /* ========================================================================================= */
           /* 面試者填寫端畫面 */
           /* ========================================================================================= */
@@ -2111,7 +1983,6 @@ export default function App() {
                     setCurrentView('admin');
                     setDraftQuestions([...customQuestions]);
                     setDraftBranches([...customBranches]);
-      setDraftBranchObjects([...branchObjects]);
       setDraftPositions([...customPositions]);
                     setDraftHeaderContent({ ...headerContent });
                   } else {
@@ -2538,7 +2409,7 @@ export default function App() {
               </form>
             )}
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );
