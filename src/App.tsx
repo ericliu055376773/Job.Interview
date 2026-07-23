@@ -506,7 +506,10 @@ export default function App() {
   const [gpsChecking, setGpsChecking] = useState<boolean>(false);
   const [gpsError, setGpsError] = useState<string>('');
   const [gpsLocked, setGpsLocked] = useState<boolean>(false);
-  // 功能2: 後台門店登入
+  // 功能2: 門店查看模式
+  const [branchViewMode, setBranchViewMode] = useState<boolean>(false); // true = 門店查看介面
+  const [branchViewSelected, setBranchViewSelected] = useState<string>('');
+  const [branchViewTab, setBranchViewTab] = useState<string>('employees'); // employees | ratings
   const [branchAdminTab, setBranchAdminTab] = useState<string>('all');
 
   const [customQuestions, setCustomQuestions] = useState<any[]>([
@@ -1080,6 +1083,33 @@ export default function App() {
                 <button type="submit" className="flex-1 py-3.5 rounded-full bg-zinc-900 text-white font-bold hover:bg-zinc-800 active:scale-95 transition-all shadow-md">確認登入</button>
               </div>
             </form>
+
+            {/* 門店查看入口 */}
+            {customBranches.length > 0 && (
+              <div className="mt-5 pt-5 border-t border-zinc-100">
+                <p className="text-xs font-bold text-zinc-400 text-center uppercase tracking-widest mb-3">門店查看（免密碼）</p>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <MapPin className="h-4 w-4 text-zinc-400" />
+                  </div>
+                  <select
+                    defaultValue=""
+                    onChange={(e: any) => {
+                      if (!e.target.value) return;
+                      setBranchViewSelected(e.target.value);
+                      setBranchViewMode(true);
+                      setBranchViewTab('employees');
+                      setShowLoginModal(false);
+                      setCurrentView('admin');
+                    }}
+                    className="block w-full pl-10 py-3 text-sm bg-zinc-50 border border-zinc-200 rounded-2xl appearance-none text-zinc-700 font-semibold focus:ring-2 focus:ring-zinc-900 focus:outline-none"
+                  >
+                    <option value="" disabled>選擇門店進入查看...</option>
+                    {customBranches.map(b => <option key={b} value={b}>{b}</option>)}
+                  </select>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1183,8 +1213,170 @@ export default function App() {
           /* 後台管理端畫面 */
           /* ========================================================================================= */
           <div className="animate-in fade-in duration-300">
-            
-            <div className="flex justify-between items-center mb-8">
+
+            {/* ================================================ */}
+            {/* 功能2: 門店查看模式（簡化介面，無設定權限）         */}
+            {/* ================================================ */}
+            {branchViewMode ? (
+              <div>
+                {/* 頂部標題列 */}
+                <div className="flex justify-between items-center mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-zinc-100 flex items-center justify-center">
+                      <MapPin className="w-5 h-5 text-zinc-700" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-extrabold text-zinc-900">{branchViewSelected}</h2>
+                      <p className="text-xs text-zinc-400 font-medium">門店查看模式</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => { setBranchViewMode(false); setCurrentView('candidate'); }}
+                    className="flex items-center gap-2 px-4 py-2 bg-zinc-100 text-zinc-600 font-bold text-sm rounded-full hover:bg-zinc-200 transition-all"
+                  >
+                    <LogOut className="w-4 h-4" /> 離開
+                  </button>
+                </div>
+
+                {/* 分頁切換 */}
+                <div className="flex gap-3 mb-6">
+                  <button
+                    onClick={() => setBranchViewTab('employees')}
+                    className={`flex-1 py-4 font-bold text-base rounded-[1.5rem] transition-all flex items-center justify-center gap-2 ${branchViewTab === 'employees' ? 'bg-zinc-900 text-white shadow-md' : 'bg-white text-zinc-500 border border-zinc-200 hover:bg-zinc-50'}`}
+                  >
+                    <Users className="w-5 h-5" /> 員工管理
+                  </button>
+                  <button
+                    onClick={() => setBranchViewTab('ratings')}
+                    className={`flex-1 py-4 font-bold text-base rounded-[1.5rem] transition-all flex items-center justify-center gap-2 ${branchViewTab === 'ratings' ? 'bg-zinc-900 text-white shadow-md' : 'bg-white text-zinc-500 border border-zinc-200 hover:bg-zinc-50'}`}
+                  >
+                    <ClipboardCheck className="w-5 h-5" /> 評分總覽
+                  </button>
+                </div>
+
+                {/* 員工管理 */}
+                {branchViewTab === 'employees' && (() => {
+                  const list = candidatesList.filter(c => c.applied_branch === branchViewSelected);
+                  return (
+                    <div className="bg-white rounded-[2rem] border border-zinc-100 shadow-sm p-6">
+                      <div className="flex items-center mb-6 pb-4 border-b border-zinc-100">
+                        <Users className="w-5 h-5 mr-2 text-zinc-500" />
+                        <h3 className="font-bold text-zinc-900">{branchViewSelected} 應徵者列表</h3>
+                        <span className="ml-auto text-xs font-bold text-zinc-400 bg-zinc-100 px-2.5 py-1 rounded-full">{list.length} 人</span>
+                      </div>
+                      {isLoadingCandidates ? (
+                        <div className="py-16 text-center flex flex-col items-center text-zinc-400"><Loader2 className="animate-spin w-7 h-7 mb-3" />載入中...</div>
+                      ) : list.length === 0 ? (
+                        <div className="py-16 text-center text-zinc-400">目前尚無應徵者資料</div>
+                      ) : (
+                        <div className="space-y-3">
+                          {list.map(candidate => {
+                            const g = GRADE_OPTIONS.find(x => x.value === candidate.interview_grade);
+                            const isOpen = expandedCardId === `bv-${candidate.id}`;
+                            return (
+                              <div key={candidate.id} className={`rounded-2xl border overflow-hidden transition-all ${isOpen ? 'border-zinc-300 shadow-sm' : 'border-zinc-100'}`}>
+                                <button type="button" onClick={() => setExpandedCardId(isOpen ? null : `bv-${candidate.id}`)}
+                                  className="w-full bg-zinc-50 hover:bg-zinc-100 px-5 py-4 flex items-center justify-between text-left transition-colors">
+                                  <div className="flex items-center gap-3 min-w-0">
+                                    {g ? <span className={`w-8 h-8 rounded-full ${g.color} text-white font-extrabold text-xs flex items-center justify-center flex-shrink-0`}>{g.value}</span>
+                                       : <span className="w-8 h-8 rounded-full bg-zinc-200 text-zinc-400 text-xs font-bold flex items-center justify-center flex-shrink-0">?</span>}
+                                    <div className="min-w-0">
+                                      <p className="font-bold text-zinc-900 text-sm truncate">{candidate.candidate_name}</p>
+                                      <p className="text-xs text-zinc-400 truncate">{candidate.applied_position} · {g ? g.desc : '待評分'}</p>
+                                    </div>
+                                  </div>
+                                  <ChevronRight className={`w-4 h-4 text-zinc-400 transition-transform flex-shrink-0 ml-2 ${isOpen ? 'rotate-90' : ''}`} />
+                                </button>
+                                {isOpen && (
+                                  <div className="bg-white border-t border-zinc-100 px-5 pb-5 pt-4 space-y-3">
+                                    <div className="flex flex-wrap gap-2">
+                                      <span className="text-xs font-semibold bg-zinc-100 text-zinc-700 px-3 py-1.5 rounded-full">{candidate.candidate_phone}</span>
+                                      {candidate.candidate_gender && <span className="text-xs font-semibold bg-zinc-100 text-zinc-700 px-3 py-1.5 rounded-full">{candidate.candidate_gender === 'male' ? '男' : candidate.candidate_gender === 'female' ? '女' : '中性'}</span>}
+                                      {candidate.candidate_birthday && <span className="text-xs font-semibold bg-zinc-100 text-zinc-700 px-3 py-1.5 rounded-full">{candidate.candidate_birthday}</span>}
+                                      <span className="text-xs font-semibold bg-zinc-100 text-zinc-700 px-3 py-1.5 rounded-full">提交：{candidate.submitted_at ? new Date(candidate.submitted_at).toLocaleString() : '—'}</span>
+                                    </div>
+                                    {g && (
+                                      <div className={`p-4 rounded-2xl border ${g.light}`}>
+                                        <div className="flex items-center gap-2 mb-2">
+                                          <span className={`w-9 h-9 rounded-full ${g.color} text-white font-extrabold flex items-center justify-center`}>{g.value}</span>
+                                          <div>
+                                            <p className="font-bold text-sm">{g.label} — {g.desc}</p>
+                                            <p className="text-xs opacity-60">面試官：{candidate.interviewer_name}</p>
+                                          </div>
+                                        </div>
+                                        {candidate.interview_note && <p className="text-sm mt-2 pt-2 border-t border-current border-opacity-20 whitespace-pre-wrap">{candidate.interview_note}</p>}
+                                      </div>
+                                    )}
+                                    {(candidate.custom_answers || []).length > 0 && (
+                                      <div className="space-y-2 pt-2 border-t border-zinc-100">
+                                        {(candidate.custom_answers || []).map((ans: any, idx: number) => (
+                                          <div key={idx}>
+                                            <p className="text-xs font-bold text-zinc-500 mb-1">Q{idx+1}. {ans.question}</p>
+                                            <p className="text-sm font-semibold text-zinc-800 bg-zinc-50 p-3 rounded-xl border border-zinc-100 whitespace-pre-wrap">{ans.answer || '—'}</p>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* 評分總覽 */}
+                {branchViewTab === 'ratings' && (() => {
+                  const list = candidatesList.filter(c => c.applied_branch === branchViewSelected);
+                  const rated = list.filter(c => c.interview_grade);
+                  return (
+                    <div className="space-y-4">
+                      {/* 統計 */}
+                      <div className="grid grid-cols-4 gap-3">
+                        {GRADE_OPTIONS.map(g => {
+                          const cnt = list.filter(c => c.interview_grade === g.value).length;
+                          return (
+                            <div key={g.value} className={`p-4 rounded-2xl border text-center ${cnt > 0 ? g.light : 'bg-zinc-50 border-zinc-100'}`}>
+                              <span className={`w-10 h-10 rounded-full ${cnt > 0 ? g.color : 'bg-zinc-200'} text-white font-extrabold text-lg flex items-center justify-center mx-auto mb-2`}>{g.value}</span>
+                              <p className={`text-2xl font-extrabold ${cnt === 0 ? 'text-zinc-300' : ''}`}>{cnt}</p>
+                              <p className={`text-xs mt-0.5 ${cnt === 0 ? 'text-zinc-300' : 'opacity-70'}`}>人</p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {rated.length === 0 ? (
+                        <div className="py-16 text-center bg-white rounded-3xl border border-dashed border-zinc-200"><p className="text-zinc-400">尚無評分紀錄</p></div>
+                      ) : GRADE_OPTIONS.map(g => {
+                        const group = list.filter(c => c.interview_grade === g.value);
+                        if (!group.length) return null;
+                        return (
+                          <div key={g.value} className="bg-white rounded-[2rem] border border-zinc-100 overflow-hidden">
+                            <div className={`px-6 py-4 flex items-center gap-3 border-b border-current border-opacity-20 ${g.light}`}>
+                              <span className={`w-10 h-10 rounded-full ${g.color} text-white font-extrabold text-lg flex items-center justify-center`}>{g.value}</span>
+                              <div><p className="font-extrabold">{g.label} — {g.desc}</p><p className="text-xs opacity-60">共 {group.length} 人</p></div>
+                            </div>
+                            <div className="divide-y divide-zinc-50">
+                              {group.map(c => (
+                                <div key={c.id} className="px-6 py-4">
+                                  <p className="font-bold text-zinc-900 text-sm">{c.candidate_name}</p>
+                                  <p className="text-xs text-zinc-400 mt-0.5">面試官：{c.interviewer_name || '—'} · {c.candidate_phone}</p>
+                                  {c.interview_note && <p className="text-sm text-zinc-600 mt-2 bg-zinc-50 p-3 rounded-xl whitespace-pre-wrap">{c.interview_note}</p>}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+            ) : (
+            <div>
+              <div className="flex justify-between items-center mb-8">
               <h2 className="text-2xl font-extrabold text-zinc-900 tracking-tight flex items-center">
                 <SettingsIcon className="w-6 h-6 mr-2 text-zinc-900" />
                 面試單後台管理
@@ -1902,6 +2094,8 @@ export default function App() {
             )}
 
           </div>
+            </div>
+            )}
 
         ) : (
           /* ========================================================================================= */
