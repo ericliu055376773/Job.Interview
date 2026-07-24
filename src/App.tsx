@@ -661,11 +661,17 @@ export default function App() {
   const [draftHeaderContent, setDraftHeaderContent] = useState<any>(defaultHeader);
 
   const [customBranches, setCustomBranches] = useState<string[]>(['虎尾店', '斗六店']);
+  const [branchObjects, setBranchObjects] = useState<{name:string,lat:number|null,lng:number|null}[]>([]);
+  const [draftBranchObjects, setDraftBranchObjects] = useState<{name:string,lat:number|null,lng:number|null}[]>([]);
+  const branchDragIndex = useRef<number|null>(null);
+  const branchDragOverIndex = useRef<number|null>(null);
   const [customPositions, setCustomPositions] = useState<string[]>(['外場服務人員 (正職/兼職)', '內場廚房人員 (正職/兼職)', '店長 / 儲備幹部']);
   const [draftPositions, setDraftPositions] = useState<string[]>(['外場服務人員 (正職/兼職)', '內場廚房人員 (正職/兼職)', '店長 / 儲備幹部']);
   const [newPositionInput, setNewPositionInput] = useState<string>('');
   const [draftBranches, setDraftBranches] = useState<string[]>([]);
   const [newBranchInput, setNewBranchInput] = useState<string>('');
+  const [newBranchLat, setNewBranchLat] = useState<string>('');
+  const [newBranchLng, setNewBranchLng] = useState<string>('');
 
   const [customQuestions, setCustomQuestions] = useState<any[]>([
     { id: 'q1', text: '您過去有餐飲業相關經驗嗎？請簡述您的經歷。', type: 'textarea', required: true },
@@ -715,6 +721,14 @@ export default function App() {
             setCustomBranches(data.customBranches);
             setDraftBranches(data.customBranches);
           }
+          if (data.branchObjects) {
+            setBranchObjects(data.branchObjects);
+            setDraftBranchObjects(data.branchObjects);
+          } else if (data.customBranches) {
+            const objs = data.customBranches.map((n: string) => ({ name: n, lat: null, lng: null }));
+            setBranchObjects(objs);
+            setDraftBranchObjects(objs);
+          }
           if (data.customPositions) {
             setCustomPositions(data.customPositions);
             setDraftPositions(data.customPositions);
@@ -735,6 +749,7 @@ export default function App() {
       setCurrentView('admin');
       setDraftQuestions([...customQuestions]); 
       setDraftBranches([...customBranches]);
+      setDraftBranchObjects([...branchObjects]);
       setDraftPositions([...customPositions]);
       setDraftHeaderContent({ ...headerContent });
       setShowLoginModal(false);
@@ -1003,13 +1018,31 @@ export default function App() {
 
   const handleAddBranch = () => {
     const trimmed = newBranchInput.trim();
-    if (trimmed && !draftBranches.includes(trimmed)) {
-      setDraftBranches([...draftBranches, trimmed]);
-      setNewBranchInput('');
-    }
+    if (!trimmed || draftBranches.includes(trimmed)) return;
+    const lat = newBranchLat ? parseFloat(newBranchLat) : null;
+    const lng = newBranchLng ? parseFloat(newBranchLng) : null;
+    setDraftBranches([...draftBranches, trimmed]);
+    setDraftBranchObjects([...draftBranchObjects, { name: trimmed, lat, lng }]);
+    setNewBranchInput(''); setNewBranchLat(''); setNewBranchLng('');
   };
   const handleDeleteBranch = (branch: string) => {
     setDraftBranches(draftBranches.filter(b => b !== branch));
+    setDraftBranchObjects(draftBranchObjects.filter((b: any) => b.name !== branch));
+  };
+
+  // 拖曳排序
+  const handleBranchDragStart = (i: number) => { branchDragIndex.current = i; };
+  const handleBranchDragEnter = (i: number) => { branchDragOverIndex.current = i; };
+  const handleBranchDragEnd = () => {
+    if (branchDragIndex.current === null || branchDragOverIndex.current === null) return;
+    if (branchDragIndex.current === branchDragOverIndex.current) return;
+    const updB = [...draftBranches]; const updO = [...draftBranchObjects];
+    const [splB] = updB.splice(branchDragIndex.current, 1);
+    const [splO] = updO.splice(branchDragIndex.current, 1);
+    updB.splice(branchDragOverIndex.current, 0, splB);
+    updO.splice(branchDragOverIndex.current, 0, splO);
+    setDraftBranches(updB); setDraftBranchObjects(updO);
+    branchDragIndex.current = null; branchDragOverIndex.current = null;
   };
 
   const handleEditQuestion = (q: any) => {
@@ -1040,6 +1073,7 @@ export default function App() {
   const handleSaveSettings = async () => {
     setCustomQuestions([...draftQuestions]);
     setCustomBranches([...draftBranches]);
+    setBranchObjects([...draftBranchObjects]);
     setCustomPositions([...draftPositions]);
     setHeaderContent({ ...draftHeaderContent });
     
@@ -1061,6 +1095,7 @@ export default function App() {
         headerContent: draftHeaderContent,
         customQuestions: draftQuestions,
         customBranches: draftBranches,
+        branchObjects: draftBranchObjects,
         customPositions: draftPositions,
         updated_at: new Date().toISOString()
       });
@@ -1440,36 +1475,68 @@ export default function App() {
 
                     {/* 應徵分店設定 */}
                     <div className="pt-6 border-t border-zinc-100">
-                      <label className="block text-sm font-semibold text-zinc-700 mb-3">應徵分店選項</label>
-                      <div className="flex space-x-3 mb-4">
+                      <label className="block text-sm font-semibold text-zinc-700 mb-1">應徵分店選項</label>
+                      <p className="text-xs text-zinc-400 mb-3">可拖曳 ⠿ 調整順序，GPS 設定後面試者需在 50 公尺內才能使用</p>
+                      <div className="space-y-2 mb-4">
                         <input
                           type="text"
                           value={newBranchInput}
                           onChange={(e: any) => setNewBranchInput(e.target.value)}
-                          placeholder="輸入分店名稱 (例如：虎尾店)"
-                          className="focus:ring-2 focus:ring-zinc-900 block w-full sm:text-sm border-transparent bg-zinc-100 rounded-2xl py-3 px-4 transition-all focus:bg-white"
+                          placeholder="分店名稱（例如：虎尾店）"
+                          className="focus:ring-2 focus:ring-zinc-900 block w-full sm:text-sm border-transparent bg-zinc-100 rounded-2xl py-3 px-4 transition-all focus:bg-white text-zinc-900 font-medium"
                           onKeyDown={(e: any) => { if (e.key === 'Enter') { e.preventDefault(); handleAddBranch(); } }}
                         />
+                        <div className="flex gap-2">
+                          <input
+                            type="number"
+                            value={newBranchLat}
+                            onChange={(e: any) => setNewBranchLat(e.target.value)}
+                            placeholder="緯度（選填，例：23.7055）"
+                            className="focus:ring-2 focus:ring-zinc-900 block w-full sm:text-xs border-transparent bg-zinc-100 rounded-2xl py-2.5 px-4 transition-all focus:bg-white text-zinc-900"
+                            step="any"
+                          />
+                          <input
+                            type="number"
+                            value={newBranchLng}
+                            onChange={(e: any) => setNewBranchLng(e.target.value)}
+                            placeholder="經度（選填，例：120.5390）"
+                            className="focus:ring-2 focus:ring-zinc-900 block w-full sm:text-xs border-transparent bg-zinc-100 rounded-2xl py-2.5 px-4 transition-all focus:bg-white text-zinc-900"
+                            step="any"
+                          />
+                        </div>
                         <button
                           onClick={handleAddBranch}
                           disabled={!newBranchInput.trim()}
-                          className="px-6 py-3 bg-zinc-900 text-white rounded-2xl font-bold hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all whitespace-nowrap"
+                          className="w-full py-3 bg-zinc-900 text-white rounded-2xl font-bold hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                         >
                           新增分店
                         </button>
                       </div>
-                      
+
                       {draftBranches.length === 0 ? (
                         <p className="text-sm text-zinc-400 font-medium bg-zinc-50 py-4 text-center rounded-2xl">目前尚無任何分店選項</p>
                       ) : (
-                        <div className="flex flex-wrap gap-2">
-                          {draftBranches.map(branch => (
-                            <div key={branch} className="flex items-center bg-zinc-100 border border-zinc-200 px-4 py-2 rounded-full">
-                              <span className="text-[13px] font-bold text-zinc-800 mr-2">{branch}</span>
-                              <button 
-                                onClick={() => handleDeleteBranch(branch)}
-                                className="text-zinc-400 hover:text-red-500 transition-colors"
-                              >
+                        <div className="space-y-2">
+                          {draftBranchObjects.map((branch: any, idx: number) => (
+                            <div
+                              key={branch.name}
+                              draggable
+                              onDragStart={() => handleBranchDragStart(idx)}
+                              onDragEnter={() => handleBranchDragEnter(idx)}
+                              onDragEnd={handleBranchDragEnd}
+                              onDragOver={(e: any) => e.preventDefault()}
+                              className="flex items-center bg-zinc-50 border border-zinc-200 px-3 py-2.5 rounded-2xl gap-2 active:opacity-60 cursor-grab"
+                            >
+                              <span className="text-zinc-300 hover:text-zinc-500 select-none text-lg leading-none">⠿</span>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-bold text-zinc-800">{branch.name}</p>
+                                {branch.lat && branch.lng ? (
+                                  <p className="text-xs text-emerald-600 font-medium">📍 {Number(branch.lat).toFixed(4)}, {Number(branch.lng).toFixed(4)}</p>
+                                ) : (
+                                  <p className="text-xs text-zinc-400">未設定 GPS（不限定位置）</p>
+                                )}
+                              </div>
+                              <button onClick={() => handleDeleteBranch(branch.name)} className="text-zinc-400 hover:text-red-500 transition-colors flex-shrink-0">
                                 <Trash2 className="w-4 h-4" />
                               </button>
                             </div>
