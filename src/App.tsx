@@ -669,8 +669,8 @@ export default function App() {
   const [draftHeaderContent, setDraftHeaderContent] = useState<any>(defaultHeader);
 
   const [customBranches, setCustomBranches] = useState<string[]>(['虎尾店', '斗六店']);
-  const [branchObjects, setBranchObjects] = useState<{name:string,lat:number|null,lng:number|null}[]>([]);
-  const [draftBranchObjects, setDraftBranchObjects] = useState<{name:string,lat:number|null,lng:number|null}[]>([]);
+  const [branchObjects, setBranchObjects] = useState<{name:string,lat:number|null,lng:number|null,pin:string}[]>([]);
+  const [draftBranchObjects, setDraftBranchObjects] = useState<{name:string,lat:number|null,lng:number|null,pin:string}[]>([]);
   const branchDragIndex = useRef<number|null>(null);
   const branchDragOverIndex = useRef<number|null>(null);
   const [customPositions, setCustomPositions] = useState<string[]>(['外場服務人員 (正職/兼職)', '內場廚房人員 (正職/兼職)', '店長 / 儲備幹部']);
@@ -733,7 +733,7 @@ export default function App() {
             setBranchObjects(data.branchObjects);
             setDraftBranchObjects(data.branchObjects);
           } else if (data.customBranches) {
-            const objs = data.customBranches.map((n: string) => ({ name: n, lat: null, lng: null }));
+            const objs = data.customBranches.map((n: string) => ({ name: n, lat: null, lng: null, pin: '' }));
             setBranchObjects(objs);
             setDraftBranchObjects(objs);
           }
@@ -1077,7 +1077,7 @@ export default function App() {
     const lat = newBranchLat ? parseFloat(newBranchLat) : null;
     const lng = newBranchLng ? parseFloat(newBranchLng) : null;
     setDraftBranches([...draftBranches, trimmed]);
-    setDraftBranchObjects([...draftBranchObjects, { name: trimmed, lat, lng }]);
+    setDraftBranchObjects([...draftBranchObjects, { name: trimmed, lat, lng, pin: '' }]);
     setNewBranchInput(''); setNewBranchLat(''); setNewBranchLng('');
   };
   const handleDeleteBranch = (branch: string) => {
@@ -1280,7 +1280,8 @@ export default function App() {
               onChange={(e: any) => { setManagePinInput(e.target.value); setManagePinError(false); }}
               onKeyDown={(e: any) => {
                 if (e.key === 'Enter') {
-                  if (managePinInput === headerContent.managePin) {
+                  const branchObj = branchObjects.find((b: any) => b.name === selectedBranch);
+                  if (managePinInput === (branchObj?.pin || '')) {
                     setShowManagePinModal(false); setCurrentView('branchManage');
                   } else { setManagePinError(true); }
                 }
@@ -1295,7 +1296,8 @@ export default function App() {
                 className="flex-1 py-3.5 rounded-full bg-zinc-100 text-zinc-700 font-bold hover:bg-zinc-200 transition-all">取消</button>
               <button type="button"
                 onClick={() => {
-                  if (managePinInput === headerContent.managePin) {
+                  const branchObj = branchObjects.find((b: any) => b.name === selectedBranch);
+                  if (managePinInput === (branchObj?.pin || '')) {
                     setShowManagePinModal(false); setCurrentView('branchManage');
                   } else { setManagePinError(true); }
                 }}
@@ -1419,7 +1421,9 @@ export default function App() {
                   {/* 評分與管理 */}
                   <button type="button"
                     onClick={() => {
-                        if (headerContent.managePin && headerContent.managePin.trim() !== '') {
+                        const branchObj = branchObjects.find((b: any) => b.name === selectedBranch);
+                        const pin = branchObj?.pin || '';
+                        if (pin.trim() !== '') {
                           setManagePinInput('');
                           setManagePinError(false);
                           setShowManagePinModal(true);
@@ -1601,38 +1605,6 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* 評分與管理密碼設定 */}
-                    <div className="pt-6 border-t border-zinc-100">
-                      <div className="flex items-center gap-2 mb-1">
-                        <div className="w-3 h-3 rounded-full bg-zinc-800"></div>
-                        <label className="block text-sm font-semibold text-zinc-700">評分與管理密碼</label>
-                      </div>
-                      <p className="text-xs text-zinc-400 mb-4">門店人員點「評分與管理」時需輸入此密碼。留空表示不需要密碼。</p>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          value={draftHeaderContent.managePin || ''}
-                          onChange={(e: any) => setDraftHeaderContent((prev: any) => ({...prev, managePin: e.target.value}))}
-                          placeholder="設定密碼（留空則免密碼）"
-                          className="focus:ring-2 focus:ring-zinc-900 block w-full sm:text-sm border-transparent bg-zinc-100 rounded-2xl py-3.5 px-4 transition-all focus:bg-white text-zinc-900 font-bold tracking-widest"
-                        />
-                        {draftHeaderContent.managePin && (
-                          <button type="button"
-                            onClick={() => setDraftHeaderContent((prev: any) => ({...prev, managePin: ''}))}
-                            className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-red-500 transition-colors text-xs font-bold">
-                            清除密碼
-                          </button>
-                        )}
-                      </div>
-                      {draftHeaderContent.managePin ? (
-                        <div className="mt-3 bg-zinc-50 border border-zinc-200 rounded-2xl px-4 py-3 flex items-center gap-2">
-                          <Lock className="w-4 h-4 text-zinc-500 flex-shrink-0" />
-                          <p className="text-sm font-medium text-zinc-600">目前密碼：<span className="font-extrabold text-zinc-900 tracking-widest">{draftHeaderContent.managePin}</span></p>
-                        </div>
-                      ) : (
-                        <p className="mt-2 text-xs text-zinc-400">⚠ 目前未設定密碼，任何人皆可進入評分與管理頁面。</p>
-                      )}
-                    </div>
 
                     {/* 應徵分店設定 */}
                     <div className="pt-6 border-t border-zinc-100">
@@ -1691,20 +1663,42 @@ export default function App() {
                               onDragEnter={() => handleBranchDragEnter(idx)}
                               onDragEnd={handleBranchDragEnd}
                               onDragOver={(e: any) => e.preventDefault()}
-                              className="flex items-center bg-zinc-50 border border-zinc-200 px-3 py-2.5 rounded-2xl gap-2 active:opacity-60 cursor-grab"
+                              className="bg-zinc-50 border border-zinc-200 px-3 py-3 rounded-2xl gap-2 active:opacity-60"
                             >
-                              <span className="text-zinc-300 hover:text-zinc-500 select-none text-lg leading-none">⠿</span>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-bold text-zinc-800">{branch.name}</p>
-                                {branch.lat && branch.lng ? (
-                                  <p className="text-xs text-emerald-600 font-medium">📍 {Number(branch.lat).toFixed(4)}, {Number(branch.lng).toFixed(4)}</p>
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className="text-zinc-300 hover:text-zinc-500 select-none text-lg leading-none cursor-grab">⠿</span>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-bold text-zinc-800">{branch.name}</p>
+                                  {branch.lat && branch.lng ? (
+                                    <p className="text-xs text-emerald-600 font-medium">📍 {Number(branch.lat).toFixed(4)}, {Number(branch.lng).toFixed(4)}</p>
+                                  ) : (
+                                    <p className="text-xs text-zinc-400">未設定 GPS</p>
+                                  )}
+                                </div>
+                                <button onClick={() => handleDeleteBranch(branch.name)} className="text-zinc-400 hover:text-red-500 transition-colors flex-shrink-0">
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                              {/* 門店密碼設定 */}
+                              <div className="flex items-center gap-2 bg-white border border-zinc-200 rounded-xl px-3 py-2">
+                                <Lock className="w-3.5 h-3.5 text-zinc-400 flex-shrink-0" />
+                                <input
+                                  type="text"
+                                  value={branch.pin || ''}
+                                  onChange={(e: any) => {
+                                    const updated = [...draftBranchObjects];
+                                    updated[idx] = { ...updated[idx], pin: e.target.value };
+                                    setDraftBranchObjects(updated);
+                                  }}
+                                  placeholder="評分與管理密碼（留空免密碼）"
+                                  className="flex-1 text-xs font-bold tracking-widest bg-transparent outline-none text-zinc-800 placeholder:font-normal placeholder:tracking-normal placeholder:text-zinc-400"
+                                />
+                                {branch.pin ? (
+                                  <span className="text-xs font-bold text-emerald-600 flex-shrink-0">🔒 已設定</span>
                                 ) : (
-                                  <p className="text-xs text-zinc-400">未設定 GPS（不限定位置）</p>
+                                  <span className="text-xs text-zinc-400 flex-shrink-0">免密碼</span>
                                 )}
                               </div>
-                              <button onClick={() => handleDeleteBranch(branch.name)} className="text-zinc-400 hover:text-red-500 transition-colors flex-shrink-0">
-                                <Trash2 className="w-4 h-4" />
-                              </button>
                             </div>
                           ))}
                         </div>
