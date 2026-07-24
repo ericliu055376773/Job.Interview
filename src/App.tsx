@@ -780,7 +780,7 @@ export default function App() {
   const handleLogoutAttempt = () => {
     const isQuestionsDirty = JSON.stringify(draftQuestions) !== JSON.stringify(customQuestions);
     const isHeaderDirty = JSON.stringify(draftHeaderContent) !== JSON.stringify(headerContent);
-    const isBranchesDirty = JSON.stringify(draftBranches) !== JSON.stringify(customBranches);
+    const isBranchesDirty = JSON.stringify(draftBranches) !== JSON.stringify(customBranches) || JSON.stringify(draftBranchObjects) !== JSON.stringify(branchObjects);
     const isPositionsDirty = JSON.stringify(draftPositions) !== JSON.stringify(customPositions);
     
     if (isQuestionsDirty || isHeaderDirty || isBranchesDirty) {
@@ -1517,6 +1517,11 @@ export default function App() {
                         <p className="text-sm text-zinc-400 font-medium bg-zinc-50 py-4 text-center rounded-2xl">目前尚無任何分店選項</p>
                       ) : (
                         <div className="space-y-2">
+                          {JSON.stringify(draftBranches) !== JSON.stringify(customBranches) && (
+                            <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-2.5">
+                              <span className="text-amber-600 text-sm font-bold">⚠ 有未儲存的分店變更，請記得點「確認儲存並發布」</span>
+                            </div>
+                          )}
                           {draftBranchObjects.map((branch: any, idx: number) => (
                             <div
                               key={branch.name}
