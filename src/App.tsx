@@ -630,6 +630,10 @@ export default function App() {
   const [gpsChecking, setGpsChecking] = useState<string>(''); // 正在驗證哪個門店
   const [gpsError, setGpsError] = useState<string>('');
   const [gpsLockedBranch, setGpsLockedBranch] = useState<string>(''); // 被鎖定的門店名稱
+  // 評分與管理密碼
+  const [showManagePinModal, setShowManagePinModal] = useState<boolean>(false);
+  const [managePinInput, setManagePinInput] = useState<string>('');
+  const [managePinError, setManagePinError] = useState<boolean>(false);
   const [adminEmployeeTab, setAdminEmployeeTab] = useState<string>('all'); 
   const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -658,7 +662,8 @@ export default function App() {
     logoUrl: "",
     consentText: "我瞭解並同意貴公司為「人才招募」目的，蒐集、處理我的個人資料，未經同意不外流。",
     reviewNoticeTitle: "面試者已完成填寫",
-    reviewNoticeText: "請面試官確認資料後，向右滑動下方紅色滑軌開始進行評分。"
+    reviewNoticeText: "請面試官確認資料後，向右滑動下方紅色滑軌開始進行評分。",
+    managePin: ""
   };
   const [headerContent, setHeaderContent] = useState<any>(defaultHeader);
   const [draftHeaderContent, setDraftHeaderContent] = useState<any>(defaultHeader);
@@ -1049,13 +1054,13 @@ export default function App() {
           branchObj.lat!, branchObj.lng!
         );
         setGpsChecking('');
-        if (dist <= 50) {
+        if (dist <= 500) {
           setSelectedBranch(branchName);
           setCurrentView('branchHome');
           setGpsError('');
         } else {
           setGpsLockedBranch(branchName);
-          setGpsError(`距離 ${branchName} 約 ${Math.round(dist)} 公尺，超出 50 公尺範圍，無法進入。`);
+          setGpsError(`距離 ${branchName} 約 ${Math.round(dist)} 公尺，超出 500 公尺範圍，無法進入。`);
         }
       },
       () => {
@@ -1260,6 +1265,46 @@ export default function App() {
         </div>
       )}
 
+      {/* 評分與管理密碼 Modal */}
+      {showManagePinModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-[2rem] p-8 w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 bg-zinc-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Lock className="w-8 h-8 text-zinc-700" />
+            </div>
+            <h3 className="text-xl font-bold text-zinc-900 mb-1 text-center">評分與管理</h3>
+            <p className="text-sm text-zinc-500 mb-6 text-center">請輸入管理密碼</p>
+            <input
+              type="password"
+              value={managePinInput}
+              onChange={(e: any) => { setManagePinInput(e.target.value); setManagePinError(false); }}
+              onKeyDown={(e: any) => {
+                if (e.key === 'Enter') {
+                  if (managePinInput === headerContent.managePin) {
+                    setShowManagePinModal(false); setCurrentView('branchManage');
+                  } else { setManagePinError(true); }
+                }
+              }}
+              autoFocus
+              placeholder="請輸入密碼"
+              className={"w-full bg-zinc-100 border-2 rounded-2xl py-3.5 px-4 focus:outline-none text-center text-xl tracking-widest transition-all " + (managePinError ? 'border-red-400 bg-red-50' : 'border-transparent focus:border-zinc-900 focus:bg-white')}
+            />
+            {managePinError && <p className="text-red-500 text-sm mt-2 text-center font-bold">密碼錯誤，請再試一次</p>}
+            <div className="flex gap-3 mt-5">
+              <button type="button" onClick={() => { setShowManagePinModal(false); setManagePinInput(''); setManagePinError(false); }}
+                className="flex-1 py-3.5 rounded-full bg-zinc-100 text-zinc-700 font-bold hover:bg-zinc-200 transition-all">取消</button>
+              <button type="button"
+                onClick={() => {
+                  if (managePinInput === headerContent.managePin) {
+                    setShowManagePinModal(false); setCurrentView('branchManage');
+                  } else { setManagePinError(true); }
+                }}
+                className="flex-1 py-3.5 rounded-full bg-zinc-900 text-white font-bold hover:bg-zinc-800 transition-all">確認</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showUnsavedModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-[2rem] p-8 w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200">
@@ -1373,7 +1418,15 @@ export default function App() {
                   </button>
                   {/* 評分與管理 */}
                   <button type="button"
-                    onClick={() => setCurrentView('branchManage')}
+                    onClick={() => {
+                        if (headerContent.managePin && headerContent.managePin.trim() !== '') {
+                          setManagePinInput('');
+                          setManagePinError(false);
+                          setShowManagePinModal(true);
+                        } else {
+                          setCurrentView('branchManage');
+                        }
+                      }}
                     className="w-full py-8 bg-white border-2 border-zinc-200 text-zinc-900 rounded-[2rem] font-extrabold text-xl flex flex-col items-center justify-center gap-3 shadow-sm hover:border-zinc-400 hover:bg-zinc-50 active:scale-[0.98] transition-all">
                     <div className="w-14 h-14 bg-zinc-100 rounded-full flex items-center justify-center">
                       <ClipboardCheck className="w-7 h-7 text-zinc-700" />
@@ -1548,10 +1601,43 @@ export default function App() {
                       </div>
                     </div>
 
+                    {/* 評分與管理密碼設定 */}
+                    <div className="pt-6 border-t border-zinc-100">
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="w-3 h-3 rounded-full bg-zinc-800"></div>
+                        <label className="block text-sm font-semibold text-zinc-700">評分與管理密碼</label>
+                      </div>
+                      <p className="text-xs text-zinc-400 mb-4">門店人員點「評分與管理」時需輸入此密碼。留空表示不需要密碼。</p>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={draftHeaderContent.managePin || ''}
+                          onChange={(e: any) => setDraftHeaderContent((prev: any) => ({...prev, managePin: e.target.value}))}
+                          placeholder="設定密碼（留空則免密碼）"
+                          className="focus:ring-2 focus:ring-zinc-900 block w-full sm:text-sm border-transparent bg-zinc-100 rounded-2xl py-3.5 px-4 transition-all focus:bg-white text-zinc-900 font-bold tracking-widest"
+                        />
+                        {draftHeaderContent.managePin && (
+                          <button type="button"
+                            onClick={() => setDraftHeaderContent((prev: any) => ({...prev, managePin: ''}))}
+                            className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-red-500 transition-colors text-xs font-bold">
+                            清除密碼
+                          </button>
+                        )}
+                      </div>
+                      {draftHeaderContent.managePin ? (
+                        <div className="mt-3 bg-zinc-50 border border-zinc-200 rounded-2xl px-4 py-3 flex items-center gap-2">
+                          <Lock className="w-4 h-4 text-zinc-500 flex-shrink-0" />
+                          <p className="text-sm font-medium text-zinc-600">目前密碼：<span className="font-extrabold text-zinc-900 tracking-widest">{draftHeaderContent.managePin}</span></p>
+                        </div>
+                      ) : (
+                        <p className="mt-2 text-xs text-zinc-400">⚠ 目前未設定密碼，任何人皆可進入評分與管理頁面。</p>
+                      )}
+                    </div>
+
                     {/* 應徵分店設定 */}
                     <div className="pt-6 border-t border-zinc-100">
                       <label className="block text-sm font-semibold text-zinc-700 mb-1">應徵分店選項</label>
-                      <p className="text-xs text-zinc-400 mb-3">可拖曳 ⠿ 調整順序，GPS 設定後面試者需在 50 公尺內才能使用</p>
+                      <p className="text-xs text-zinc-400 mb-3">可拖曳 ⠿ 調整順序，GPS 設定後面試者需在 500 公尺內才能使用</p>
                       <div className="space-y-2 mb-4">
                         <input
                           type="text"
