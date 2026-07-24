@@ -627,6 +627,9 @@ export default function App() {
   const [adminMainTab, setAdminMainTab] = useState<string>('settings'); 
   const [selectedBranch, setSelectedBranch] = useState<string>(''); // 門店選擇登入
   const [branchManageTab, setBranchManageTab] = useState<string>('employees'); // employees | ratings
+  const [gpsChecking, setGpsChecking] = useState<string>(''); // 正在驗證哪個門店
+  const [gpsError, setGpsError] = useState<string>('');
+  const [gpsLockedBranch, setGpsLockedBranch] = useState<string>(''); // 被鎖定的門店名稱
   const [adminEmployeeTab, setAdminEmployeeTab] = useState<string>('all'); 
   const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -1016,6 +1019,53 @@ export default function App() {
     dragOverItemIndex.current = null;
   };
 
+  // GPS 距離計算（Haversine 公式，單位：公尺）
+  const calcDistance = (lat1: number, lng1: number, lat2: number, lng2: number) => {
+    const R = 6371000;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLng/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  };
+
+  // 選門店時的 GPS 驗證
+  const handleSelectBranch = (branchName: string) => {
+    const branchObj = branchObjects.find((b: any) => b.name === branchName);
+    // 若此門店沒有設定 GPS，直接放行
+    if (!branchObj || branchObj.lat === null || branchObj.lng === null) {
+      setSelectedBranch(branchName);
+      setCurrentView('branchHome');
+      setGpsError('');
+      return;
+    }
+    // 有設定 GPS，需要驗證位置
+    setGpsChecking(branchName);
+    setGpsError('');
+    setGpsLockedBranch('');
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const dist = calcDistance(
+          pos.coords.latitude, pos.coords.longitude,
+          branchObj.lat!, branchObj.lng!
+        );
+        setGpsChecking('');
+        if (dist <= 50) {
+          setSelectedBranch(branchName);
+          setCurrentView('branchHome');
+          setGpsError('');
+        } else {
+          setGpsLockedBranch(branchName);
+          setGpsError(`距離 ${branchName} 約 ${Math.round(dist)} 公尺，超出 50 公尺範圍，無法進入。`);
+        }
+      },
+      () => {
+        setGpsChecking('');
+        setGpsError('無法取得定位，請確認已開啟裝置定位權限後再試。');
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
   const handleAddBranch = () => {
     const trimmed = newBranchInput.trim();
     if (!trimmed || draftBranches.includes(trimmed)) return;
@@ -1261,18 +1311,43 @@ export default function App() {
                 /* 選門店 */
                 <div className="bg-white rounded-[2rem] border border-zinc-100 shadow-sm p-7 space-y-4">
                   <p className="text-sm font-bold text-zinc-500 text-center">請選擇您的門店</p>
+                  {/* GPS 錯誤訊息 */}
+                  {gpsError && (
+                    <div className="bg-red-50 border border-red-200 rounded-2xl px-4 py-3 flex items-start gap-2">
+                      <span className="text-red-500 text-lg flex-shrink-0">⚠</span>
+                      <p className="text-sm font-medium text-red-700 leading-relaxed">{gpsError}</p>
+                    </div>
+                  )}
                   <div className="space-y-3">
-                    {customBranches.map((branch: string) => (
-                      <button key={branch} type="button"
-                        onClick={() => { setSelectedBranch(branch); setCurrentView('branchHome'); }}
-                        className="w-full py-4 px-5 bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 rounded-2xl font-bold text-zinc-800 text-left flex items-center justify-between active:scale-[0.98] transition-all">
-                        <span className="flex items-center gap-3">
-                          <MapPin className="w-5 h-5 text-zinc-400" />
-                          {branch}
-                        </span>
-                        <ChevronRight className="w-5 h-5 text-zinc-300" />
-                      </button>
-                    ))}
+                    {customBranches.map((branch: string) => {
+                      const isChecking = gpsChecking === branch;
+                      const isLocked = gpsLockedBranch === branch;
+                      const branchObj = branchObjects.find((b: any) => b.name === branch);
+                      const hasGps = branchObj && branchObj.lat !== null && branchObj.lng !== null;
+                      return (
+                        <button key={branch} type="button"
+                          onClick={() => !isChecking && handleSelectBranch(branch)}
+                          disabled={isChecking}
+                          className={"w-full py-4 px-5 border rounded-2xl font-bold text-zinc-800 text-left flex items-center justify-between active:scale-[0.98] transition-all " +
+                            (isLocked ? 'bg-red-50 border-red-200 opacity-60 cursor-not-allowed' :
+                             isChecking ? 'bg-zinc-50 border-zinc-200 cursor-wait' :
+                             'bg-zinc-50 hover:bg-zinc-100 border-zinc-200')}>
+                          <span className="flex items-center gap-3">
+                            <MapPin className={"w-5 h-5 " + (isLocked ? 'text-red-400' : 'text-zinc-400')} />
+                            <span>
+                              {branch}
+                              {hasGps && <span className="ml-2 text-xs font-medium text-emerald-600">📍GPS</span>}
+                            </span>
+                          </span>
+                          {isChecking
+                            ? <Loader2 className="w-5 h-5 text-zinc-400 animate-spin" />
+                            : isLocked
+                            ? <span className="text-xs text-red-500 font-bold">超出範圍</span>
+                            : <ChevronRight className="w-5 h-5 text-zinc-300" />
+                          }
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               ) : (
